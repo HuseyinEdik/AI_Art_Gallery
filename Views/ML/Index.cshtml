@@ -1,0 +1,114 @@
+﻿@{
+    ViewData["Title"] = "AI Laboratuvarı";
+}
+
+<div class="container mt-4">
+    <div class="text-center mb-5">
+        <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3 shadow-lg"
+             style="background: linear-gradient(135deg, #00f260 0%, #0575E6 100%); width: 70px; height: 70px;">
+            <i class="fa-solid fa-brain fa-2x text-white"></i>
+        </div>
+        <h2 class="fw-bold text-white">ML Analiz Motoru</h2>
+        <p class="text-secondary">Arkadaşınızın geliştirdiği modeli test edin.</p>
+    </div>
+
+    <div class="row g-4 align-items-stretch">
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-lg h-100" style="background-color: #1e1e1e; border-radius: 15px;">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="text-white mb-0"><i class="fa-solid fa-keyboard me-2 text-primary"></i>Veri Girişi</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="analysisForm">
+                        <label class="text-secondary small fw-bold mb-2">PROMPT / METİN</label>
+                        <textarea id="promptInput" class="form-control bg-dark text-white border-secondary mb-4" rows="10"
+                                  placeholder="Analiz edilecek veriyi buraya girin..." style="resize: none;"></textarea>
+
+                        <button type="button" onclick="runAnalysis()" class="btn btn-primary-custom w-100 py-3 rounded-pill fw-bold shadow">
+                            <i class="fa-solid fa-bolt me-2"></i> Analiz Et
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-1 d-none d-lg-flex align-items-center justify-content-center">
+            <i class="fa-solid fa-circle-arrow-right fa-3x text-secondary opacity-50"></i>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg h-100" style="background-color: #1e1e1e; border-radius: 15px;">
+                <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between">
+                    <h5 class="text-white mb-0"><i class="fa-solid fa-square-poll-vertical me-2 text-success"></i>Sonuçlar</h5>
+                    <span id="statusBadge" class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary rounded-pill">Bekleniyor</span>
+                </div>
+
+                <div class="card-body p-4 d-flex flex-column justify-content-center">
+
+                    <div id="loadingArea" class="text-center d-none">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p class="text-secondary">Model çalışıyor...</p>
+                    </div>
+
+                    <div id="resultArea" class="d-none w-100">
+                        <div class="p-3 rounded-3 bg-black border border-secondary font-monospace text-success"
+                             style="min-height: 250px; border-left: 5px solid #00f260 !important;">
+                            <p class="mb-0" id="outputText">Sonuç buraya gelecek...</p>
+                        </div>
+                    </div>
+
+                    <div id="emptyState" class="text-center">
+                        <i class="fa-solid fa-microchip fa-3x text-secondary opacity-25 mb-3"></i>
+                        <p class="text-secondary">Analiz başlatılmadı.</p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-5 mb-5">
+        <a asp-controller="Artwork" asp-action="Index" class="text-secondary text-decoration-none">
+            <i class="fa-solid fa-arrow-left me-2"></i>Galeriye Dön
+        </a>
+    </div>
+</div>
+
+<script>
+    function runAnalysis() {
+        var input = document.getElementById("promptInput").value;
+        if (input.trim() === "") { alert("Lütfen metin girin!"); return; }
+
+        // Görünümü güncelle
+        document.getElementById("emptyState").classList.add("d-none");
+        document.getElementById("resultArea").classList.add("d-none");
+        document.getElementById("loadingArea").classList.remove("d-none");
+        document.getElementById("statusBadge").innerText = "İşleniyor...";
+        document.getElementById("statusBadge").className = "badge bg-primary bg-opacity-25 text-primary border border-primary rounded-pill";
+
+        // Simülasyon (2 saniye bekle)
+        setTimeout(function() {
+            document.getElementById("loadingArea").classList.add("d-none");
+            document.getElementById("resultArea").classList.remove("d-none");
+            document.getElementById("statusBadge").innerText = "Tamamlandı";
+            document.getElementById("statusBadge").className = "badge bg-success bg-opacity-25 text-success border border-success rounded-pill";
+
+            // Sahte Sonuç Yaz
+            document.getElementById("outputText").innerText = ">> Analiz Tamamlandı.\n>> Girdi: " + input + "\n>> Tahmin: %98.4 Başarılı\n>> Kategori: Teknoloji\n-------------------\nModel İşlemi Bitti.";
+        }, 2000);
+    }
+</script>
+
+<style>
+    .btn-primary-custom {
+        background: linear-gradient(90deg, #00f260, #0575E6);
+        color: white;
+        border: none;
+    }
+
+        .btn-primary-custom:hover {
+            transform: scale(1.02);
+            color: white;
+        }
+</style>

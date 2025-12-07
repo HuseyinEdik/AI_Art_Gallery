@@ -1,0 +1,153 @@
+﻿@model AI_Art_Gallery.Models.Artwork
+
+@{
+    ViewData["Title"] = Model.Title;
+    bool isLiked = ViewBag.IsLiked ?? false;
+    int likeCount = ViewBag.LikeCount ?? 0;
+}
+
+<div class="container-fluid px-5 mt-4">
+    <a asp-action="Index" class="btn btn-outline-secondary mb-4 rounded-pill px-4 border-0">
+        <i class="fa-solid fa-arrow-left me-2"></i>Galeriye Dön
+    </a>
+
+    <div class="row g-4">
+
+        <div class="col-lg-9 d-flex align-items-center justify-content-center bg-black rounded-4 p-0 shadow-lg" style="min-height: 600px; overflow: hidden;">
+            <img src="@Model.ImageUrl" class="img-fluid" style="max-height: 80vh; max-width: 100%; object-fit: contain;" alt="@Model.Title">
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card border-0 h-100" style="background-color: #1e1e1e;">
+                <div class="card-body d-flex flex-column p-4">
+
+                    <div class="mb-4 border-bottom border-secondary pb-3">
+                        <h2 class="text-white fw-bold h4">@Model.Title</h2>
+                        <small class="text-muted"><i class="fa-regular fa-calendar me-2"></i>@Model.CreatedAt.ToString("dd MMMM yyyy")</small>
+                    </div>
+
+                    <div class="d-flex align-items-center mb-4 p-3 rounded-3" style="background-color: #2c2c2c;">
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0" style="width: 40px; height: 40px;">
+                            <span class="text-white fw-bold">@Model.AppUser?.Username.Substring(0, 1).ToUpper()</span>
+                        </div>
+                        <div class="overflow-hidden">
+                            <small class="text-secondary d-block" style="font-size: 0.75rem;">Oluşturan</small>
+                            <span class="text-white fw-bold text-truncate d-block">@(Model.AppUser?.Username ?? "Anonim")</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-secondary fw-bold small mb-2">KATEGORİLER</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            @if (Model.Categories != null && Model.Categories.Any())
+                            {
+                                @foreach (var cat in Model.Categories)
+                                {
+                                    <span class="badge bg-secondary bg-opacity-25 text-info border border-info border-opacity-25 py-2 px-3 rounded-pill">
+                                        <i class="fa-solid fa-tag me-1"></i> @cat.Name
+                                    </span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted small fst-italic">Kategori belirtilmemiş.</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-secondary fw-bold small mb-2 text-uppercase">Prompt</label>
+                        <div class="p-3 rounded-3 position-relative" style="background-color: #121212; border: 1px solid #333;">
+                            <p class="text-info font-monospace small mb-0" id="promptText" style="max-height: 150px; overflow-y: auto;">@Model.PromptText</p>
+                            <button onclick="copyToClipboard()" class="btn btn-sm btn-dark position-absolute top-0 end-0 m-1" title="Kopyala">
+                                <i class="fa-regular fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto">
+                        <form asp-action="ToggleLike" asp-route-id="@Model.Id" class="mb-2">
+                            <button type="submit" class="btn w-100 py-2 rounded-3 fw-bold @(isLiked ? "btn-danger" : "btn-outline-danger")">
+                                <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart me-2"></i>
+                                @(isLiked ? "Beğendin" : "Beğen") (@likeCount)
+                            </button>
+                        </form>
+
+                        @if (User.IsInRole("Admin") || (User.Identity.IsAuthenticated && Model.AppUserId.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
+                        {
+                            <form asp-action="Delete" asp-route-id="@Model.Id">
+                                <button class="btn btn-dark w-100 text-secondary" onclick="return confirm('Silmek istediğine emin misin?');">
+                                    <i class="fa-solid fa-trash me-2"></i> Sil
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5 justify-content-center">
+        <div class="col-lg-10">
+            <h4 class="text-white mb-4"><i class="fa-regular fa-comments me-2"></i>Yorumlar (@(Model.Comments?.Count ?? 0))</h4>
+            <div class="card border-0 rounded-4" style="background-color: #1e1e1e;">
+                <div class="card-body p-4">
+                    @if (Model.Comments != null && Model.Comments.Any())
+                    {
+                        @foreach (var comment in Model.Comments)
+                        {
+                            <div class="d-flex gap-3 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                    <span class="text-white fw-bold">@comment.AppUser?.Username.Substring(0, 1).ToUpper()</span>
+                                </div>
+
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h6 class="text-white mb-0">@(comment.AppUser?.Username ?? "Misafir")</h6>
+                                            <small class="text-secondary" style="font-size: 0.75rem;">@comment.CreatedAt.ToString("dd.MM HH:mm")</small>
+                                        </div>
+
+                                        @if (User.IsInRole("Admin") || (User.Identity.IsAuthenticated && comment.AppUserId.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
+                                        {
+                                            <form asp-action="DeleteComment" method="post">
+                                                <input type="hidden" name="commentId" value="@comment.Id" />
+                                                <button type="submit" class="btn btn-link text-danger p-0" style="font-size: 0.9rem;" title="Yorumu Sil" onclick="return confirm('Yorumu silmek istiyor musun?');">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                    <p class="text-light mt-1 mb-0">@comment.Content</p>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">Henüz yorum yok. İlk yorumu sen yaz!</p>
+                    }
+
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <form asp-action="AddComment" method="post" class="mt-4">
+                            <input type="hidden" name="artworkId" value="@Model.Id" />
+                            <div class="input-group">
+                                <input type="text" name="content" class="form-control bg-dark text-white border-secondary" placeholder="Yorumunuzu yazın..." required />
+                                <button class="btn btn-primary-custom fw-bold px-4">Gönder</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyToClipboard() {
+        var text = document.getElementById("promptText").innerText;
+        navigator.clipboard.writeText(text);
+        alert("Prompt kopyalandı!");
+    }
+</script>

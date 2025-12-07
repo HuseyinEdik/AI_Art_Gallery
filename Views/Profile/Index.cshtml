@@ -1,0 +1,57 @@
+﻿@model IEnumerable<AI_Art_Gallery.Models.Artwork>
+
+@{
+    ViewData["Title"] = "Profilim";
+    var user = ViewBag.User as AI_Art_Gallery.Models.AppUser;
+}
+
+<div class="container mt-4">
+    <div class="card border-0 shadow-lg rounded-4 mb-5" style="background-color: #1e1e1e;">
+        <div class="card-body p-5">
+            <div class="d-flex align-items-center flex-wrap gap-4">
+
+                <div class="bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center shadow"
+                     style="width: 100px; height: 100px; font-size: 2.5rem; font-weight: bold; color: white;">
+                    @user?.Username.Substring(0, 1).ToUpper()
+                </div>
+
+                <div class="flex-grow-1">
+                    <h2 class="text-white fw-bold mb-1">@user?.Username</h2>
+                    <p class="text-secondary mb-2">@user?.Email</p>
+                    <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">
+                        @user?.Role Hesabı
+                    </span>
+                </div>
+
+                <div class="text-center px-4 py-2 rounded-3" style="background-color: #121212; border: 1px solid #333;">
+                    <h3 class="text-white fw-bold mb-0">@Model.Count()</h3>
+                    <small class="text-secondary">Paylaşım</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="text-white mb-4 ps-2 border-start border-4 border-primary">
+        &nbsp; Senin Koleksiyonun
+    </h4>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fa-regular fa-folder-open fa-3x text-secondary opacity-50 mb-3"></i>
+            <p class="text-secondary">Henüz hiç görsel paylaşmadın.</p>
+            <a asp-controller="Artwork" asp-action="Create" class="btn btn-outline-primary rounded-pill">
+                İlk Eserini Paylaş
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var item in Model)
+            {
+                <partial name="_ArtworkCard" model="item" />
+            }
+        </div>
+    }
+</div>

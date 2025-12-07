@@ -1,0 +1,45 @@
+﻿@model IEnumerable<AI_Art_Gallery.Models.Artwork>
+
+@{
+    ViewData["Title"] = "Galeri";
+}
+
+<div class="text-center mb-5">
+    <h1 class="display-5 fw-bold text-white">İlham Veren Promptlar</h1>
+    <p class="text-secondary">Topluluk tarafından oluşturulan en iyi AI görsellerini keşfet.</p>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    @if (!Model.Any())
+    {
+        <div class="text-center text-muted mt-5">
+            <i class="fa-solid fa-image fa-3x mb-3"></i>
+            <p>Henüz hiç görsel paylaşılmadı. İlk sen ol!</p>
+            <a asp-action="Create" class="btn btn-primary-custom mt-2">Hemen Paylaş</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var item in Model)
+        {
+            <partial name="_ArtworkCard" model="item" />
+        }
+    }
+</div>
+<a asp-controller="ML" asp-action="Index"
+   class="position-fixed bottom-0 start-0 m-4 d-flex align-items-center justify-content-center text-decoration-none shadow-lg"
+   style="width: 60px; height: 60px; background: linear-gradient(135deg, #00f260 0%, #0575E6 100%); border-radius: 50%; z-index: 9999; transition: transform 0.2s;"
+   onmouseover="this.style.transform='scale(1.1) rotate(10deg)'"
+   onmouseout="this.style.transform='scale(1)'"
+   title="ML Laboratuvarına Git">
+
+    <i class="fa-solid fa-microchip text-white fs-3"></i>
+</a>

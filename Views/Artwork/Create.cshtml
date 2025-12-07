@@ -1,0 +1,113 @@
+﻿@model AI_Art_Gallery.Models.Artwork
+
+@{
+    ViewData["Title"] = "Eser Paylaş";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg border-0 rounded-4 mt-4" style="background-color: #1e1e1e;">
+            <div class="card-header bg-transparent border-0 pt-4 pb-2 text-center">
+                <h2 class="text-white fw-bold"><i class="fa-solid fa-cloud-arrow-up me-2"></i>Eser Paylaş</h2>
+                <p class="text-secondary">Yapay zeka ile ürettiğin görseli paylaş.</p>
+            </div>
+
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post" enctype="multipart/form-data">
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-4">
+                        <label asp-for="Title" class="form-label text-white fw-semibold">Görsel Başlığı</label>
+                        <input asp-for="Title" class="form-control bg-dark text-white border-secondary" placeholder="Örn: Karlı Dağlar" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-white fw-semibold">Görsel Dosyası</label>
+                        <input type="file" name="imageFile" class="form-control bg-dark text-white border-secondary" accept="image/*" required />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-white fw-semibold">Kategoriler</label>
+
+                        <div class="mb-4">
+                            <label class="form-label text-white fw-semibold mb-3">Kategoriler</label>
+
+                            <div class="card bg-dark border-secondary p-3">
+                                <div class="row g-2" style="max-height: 200px; overflow-y: auto;">
+
+                                    @if (ViewBag.Categories != null)
+                                    {
+                                        foreach (var cat in ViewBag.Categories)
+                                        {
+                                            <div class="col-6 col-md-4">
+                                                <div class="form-check form-check-custom p-2 rounded-3 border border-secondary d-flex align-items-center ps-5 position-relative hover-highlight">
+
+                                                    <input class="form-check-input position-absolute start-0 ms-3"
+                                                           type="checkbox"
+                                                           name="selectedCategoryIds"
+                                                           value="@cat.Id"
+                                                           id="cat_@cat.Id"
+                                                           style="transform: scale(1.3);">
+
+                                                    <label class="form-check-label text-white stretched-link fw-bold small" for="cat_@cat.Id">
+                                                        @cat.Name
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="text-warning small">Kategoriler yüklenemedi.</div>
+                                    }
+
+                                </div>
+                            </div>
+                            <div class="form-text text-secondary small mt-2">
+                                <i class="fa-solid fa-check-double me-1"></i> İstediğiniz kadar kategori işaretleyebilirsiniz.
+                            </div>
+                        </div>
+
+                        <style>
+                            .form-check-custom {
+                                background-color: #2c2c2c;
+                                transition: all 0.2s;
+                            }
+                                /* Üzerine gelince veya seçilince rengi değişsin */
+                                .form-check-custom:hover, .form-check-input:checked + label {
+                                    background-color: #3d3d3d;
+                                    border-color: #bb86fc !important; /* Tema rengimiz (Mor) */
+                                }
+
+                            .form-check-input:checked {
+                                background-color: #bb86fc;
+                                border-color: #bb86fc;
+                            }
+                        </style>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="PromptText" class="form-label text-white fw-semibold">Prompt (Komut)</label>
+                        <textarea asp-for="PromptText" class="form-control bg-dark text-white border-secondary" rows="4" placeholder="Görseli oluşturmak için kullandığın komutu buraya yapıştır..."></textarea>
+                        <span asp-validation-for="PromptText" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-5">
+                        <button type="submit" class="btn btn-primary-custom btn-lg rounded-pill fw-bold">
+                            🚀 Paylaş ve Yayınla
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill">İptal</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

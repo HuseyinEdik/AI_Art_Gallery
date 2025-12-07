@@ -1,0 +1,35 @@
+﻿@model AI_Art_Gallery.Models.AppUser
+@{
+    Layout = "_Layout"; ViewData["Title"] = "Kayıt Ol";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card bg-dark text-white border-secondary">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4">Kayıt Ol</h3>
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+
+                <form asp-action="Register" method="post">
+                    <div class="mb-3">
+                        <label>Kullanıcı Adı</label>
+                        <input asp-for="Username" class="form-control bg-dark text-white" required />
+                    </div>
+                    <div class="mb-3">
+                        <label>Email</label>
+                        <input asp-for="Email" class="form-control bg-dark text-white" required />
+                    </div>
+                    <div class="mb-3">
+                        <label>Şifre</label>
+                        <input asp-for="Password" type="password" class="form-control bg-dark text-white" required />
+                    </div>
+                    <button class="btn btn-success w-100">Kayıt Ol</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

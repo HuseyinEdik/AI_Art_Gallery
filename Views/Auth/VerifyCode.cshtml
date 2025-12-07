@@ -1,0 +1,42 @@
+﻿@{
+    Layout = "_Layout"; ViewData["Title"] = "Kodu Doğrula";
+}
+
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-5 col-lg-4">
+
+        <div class="card border-0 shadow-lg rounded-4" style="background-color: #1e1e1e;">
+            <div class="card-body p-5">
+
+                <div class="text-center mb-4">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                        <i class="fa-solid fa-shield-halved fa-2x text-success"></i>
+                    </div>
+                    <h3 class="text-white fw-bold">Kodu Girin</h3>
+                    <p class="text-secondary small">E-postanıza gönderilen 6 haneli kodu aşağıya yazın.</p>
+                </div>
+
+                <form asp-action="VerifyCode">
+                    <div class="mb-4 text-center">
+                        <label class="text-secondary small fw-bold mb-2">DOĞRULAMA KODU</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary py-3 text-center fs-3 fw-bold font-monospace"
+                               style="letter-spacing: 10px;" placeholder="• • • • • •" maxlength="6" />
+                    </div>
+
+                    <a asp-action="ResetPassword" class="btn btn-success w-100 py-2 rounded-pill fw-bold mb-3">
+                        Doğrula <i class="fa-solid fa-check ms-2"></i>
+                    </a>
+                </form>
+
+                <div class="text-center">
+                    <small class="text-secondary">Kod gelmedi mi? <a href="#" class="text-info text-decoration-none">Tekrar Gönder</a></small>
+                </div>
+
+            </div>
+            <div class="progress" style="height: 4px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 66%"></div>
+            </div>
+        </div>
+
+    </div>
+</div>

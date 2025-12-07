@@ -1,0 +1,45 @@
+﻿@model IEnumerable<AI_Art_Gallery.Models.Artwork>
+
+@{
+    ViewData["Title"] = "Keşfet";
+}
+
+<div class="text-center py-5 mb-4" style="background: linear-gradient(180deg, rgba(30,30,30,0) 0%, rgba(187,134,252,0.05) 100%);">
+    <h1 class="display-4 fw-bold text-white mb-3">İlham Veren Promptlar</h1>
+    <p class="lead text-secondary mx-auto" style="max-width: 600px;">
+        Topluluk tarafından oluşturulan en iyi yapay zeka görsellerini keşfet, promptları kopyala ve sen de üret.
+    </p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success d-inline-block mt-3 px-4 rounded-pill">
+            <i class="fa-solid fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+        </div>
+    }
+</div>
+
+<div class="container-fluid px-4 px-lg-5">
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fa-regular fa-images fa-4x text-secondary opacity-25"></i>
+            </div>
+            <h3 class="text-white">Henüz görsel paylaşılmadı.</h3>
+            <p class="text-secondary">İlk paylaşımı sen yaparak topluluğa katkıda bulun!</p>
+            <a asp-action="Create" class="btn btn-primary-custom rounded-pill px-4 mt-3">
+                <i class="fa-solid fa-plus me-2"></i>Hemen Paylaş
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var item in Model)
+            {
+                <partial name="_ArtworkCard" model="item" />
+            }
+        </div>
+    }
+</div>
