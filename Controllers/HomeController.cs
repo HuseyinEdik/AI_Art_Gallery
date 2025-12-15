@@ -1,22 +1,24 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using AI_Art_Gallery.Models;
-using AI_Art_Gallery.Data; // Veritabaný için gerekli
 
 namespace AI_Art_Gallery.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly AppDbContext _context;
-
-        // Constructor: Veritabaný baðlantýsýný alýyoruz
-        public HomeController(AppDbContext context)
-        {
-            _context = context;
-        }
-
         public IActionResult Index()
         {
-            return View();
+            // Home sayfasýndan direkt Artwork/Index'e yönlendir
+            return RedirectToAction("Index", "Artwork");
+        }
+
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            });
         }
     }
 }
