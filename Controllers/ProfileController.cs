@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using AI_Art_Gallery.Data;
+using AI_Art_Gallery.Services;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 
@@ -9,30 +8,28 @@ namespace AI_Art_Gallery.Controllers
     [Authorize] // BU SATIR ÇOK ÖNEMLİ: Sadece giriş yapanlar buraya girebilir!
     public class ProfileController : Controller
     {
-        private readonly AppDbContext _context;
+        private readonly SpringApiClient _apiClient;
 
-        public ProfileController(AppDbContext context)
+        public ProfileController(SpringApiClient apiClient)
         {
-            _context = context;
+            _apiClient = apiClient;
         }
 
         public async Task<IActionResult> Index()
         {
-            // 1. Giriş yapan kullanıcının ID'sini Çerezden (Cookie) al
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // 1. Giriş yapan kullanıcının token'ını al
+            var token = HttpContext.Session.GetString("jwt");
+            
+            if (string.IsNullOrEmpty(token)) 
+                return RedirectToAction("Login", "Auth");
 
-            if (userId == null) return RedirectToAction("Login", "Auth");
+            // 2. API'den kullanıcı bilgilerini al
+            var user = await _apiClient.GetCurrentUser(token);
 
-            // 2. Kullanıcının bilgilerini bul
-            var user = await _context.AppUsers.FindAsync(int.Parse(userId));
+            // 3. API'den kullanıcının yüklediği resimleri al
+            var myArtworks = await _apiClient.GetUserArtworks(token);
 
-            // 3. Kullanıcının yüklediği resimleri bul
-            var myArtworks = await _context.Artworks
-                .Where(a => a.AppUserId == int.Parse(userId))
-                .OrderByDescending(a => a.CreatedAt)
-                .ToListAsync();
-
-            // 4. Kullanıcı bilgisini View'a taşı (ViewBag ile pratikçe)
+            // 4. Kullanıcı bilgisini View'a taşı
             ViewBag.User = user;
 
             // 5. Resim listesini modele ver

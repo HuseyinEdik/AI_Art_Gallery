@@ -1,29 +1,29 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace AI_Art_Gallery.Models
+﻿namespace AI_Art_Gallery.Models
 {
     public class AppUser
     {
-        [Key]
         public int Id { get; set; }
 
-        [Required]
-        [StringLength(50)]
         public string Username { get; set; } = string.Empty;
+        public string Surname { get; set; } = string.Empty;
 
-        [Required]
-        [EmailAddress]
         public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
 
-        [Required]
-        public string Password { get; set; } = string.Empty; // Şifre
+        public string? VerificationCode { get; set; }
+        public bool Enabled { get; set; }
 
-        public string Role { get; set; } = "User"; // Admin veya User
+        // UI için basit Role alanı
+        public string? Role { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        // İlişkiler
+        public ICollection<Role> Roles { get; set; } = new List<Role>();
         public ICollection<Artwork> Artworks { get; set; } = new List<Artwork>();
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    }
+
+    public class Role
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 }

@@ -1,81 +1,60 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using AI_Art_Gallery.Data;
+using AI_Art_Gallery.Services;
 using AI_Art_Gallery.Models;
 
 namespace AI_Art_Gallery.Controllers
 {
     public class AuthController : Controller
     {
-        private readonly AppDbContext _context;
+        private readonly SpringApiClient _api;
 
-        public AuthController(AppDbContext context)
+        public AuthController(SpringApiClient api)
         {
-            _context = context;
+            _api = api;
         }
 
-        // KAYIT OL SAYFASI
-        public IActionResult Register()
-        {
-            return View();
-        }
-
-        // KAYIT OL İŞLEMİ (POST)
-        [HttpPost]
-        public async Task<IActionResult> Register(AppUser user)
-        {
-            // Basit kayıt işlemi
-            if (ModelState.IsValid)
-            {
-                // Email kontrolü (Aynı mail var mı?)
-                if (await _context.AppUsers.AnyAsync(u => u.Email == user.Email))
-                {
-                    ViewBag.Error = "Bu email zaten kayıtlı.";
-                    return View(user);
-                }
-
-                user.Role = "User"; // Varsayılan rol
-                user.CreatedAt = DateTime.UtcNow;
-
-                _context.AppUsers.Add(user);
-                await _context.SaveChangesAsync();
-
-                return RedirectToAction("Login");
-            }
-            return View(user);
-        }
-
-        // GİRİŞ YAP SAYFASI
+        // GET: Login
+        [HttpGet]
         public IActionResult Login()
         {
             return View();
         }
 
-        // GİRİŞ YAP İŞLEMİ (POST)
+        // POST: Login
         [HttpPost]
         public async Task<IActionResult> Login(string email, string password)
         {
-            // Kullanıcıyı bul
-            var user = await _context.AppUsers
-                .FirstOrDefaultAsync(u => u.Email == email && u.Password == password);
-
-            if (user != null)
+            try
             {
-                // KİMLİK KARTI OLUŞTURMA (Claims)
+                string token = await _api.Login(email, password);
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    ViewBag.Error = "Giriş başarısız!";
+                    return View();
+                }
+
+                // Token'ı session'a kaydet
+                HttpContext.Session.SetString("jwt", token);
+
+                // Cookie tabanlı kimlik doğrulama
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, user.Username),           // Kullanıcı Adı
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), // ID'si (Bunu resim yüklerken kullanacağız)
-                    new Claim(ClaimTypes.Role, user.Role)                // Rolü
+                    new Claim(ClaimTypes.Name, email),
+                    new Claim(ClaimTypes.NameIdentifier, email),
+                    new Claim("jwt", token)
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var authProperties = new AuthenticationProperties();
+                var authProperties = new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+                };
 
-                // Sisteme giriş yap (Cookie oluştur)
                 await HttpContext.SignInAsync(
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(claimsIdentity),
@@ -83,20 +62,64 @@ namespace AI_Art_Gallery.Controllers
 
                 return RedirectToAction("Index", "Artwork");
             }
+            catch (Exception ex)
+            {
+                ViewBag.Error = "Giriş başarısız! Kullanıcı adı veya şifre hatalı.";
+                return View();
+            }
+        }
 
-            ViewBag.Error = "Email veya şifre hatalı!";
+        // GET: Register
+        [HttpGet]
+        public IActionResult Register()
+        {
             return View();
         }
 
-        // ÇIKIŞ YAP
+        // POST: Register
+        [HttpPost]
+        public async Task<IActionResult> Register(string username, string email, string password)
+        {
+            try
+            {
+                var response = await _api.Register(username, email, password);
+
+                TempData["SuccessMessage"] = "Kayıt başarılı! Giriş yapabilirsiniz.";
+                return RedirectToAction("Login");
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = "Kayıt başarısız! Bu kullanıcı adı veya email zaten kullanılıyor.";
+                return View();
+            }
+        }
+
+        // Logout
         public async Task<IActionResult> Logout()
         {
+            var token = HttpContext.Session.GetString("jwt");
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                try
+                {
+                    await _api.Logout(token);
+                }
+                catch { }
+            }
+
+            HttpContext.Session.Clear();
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("Login");
+
+            return RedirectToAction("Index", "Artwork");
         }
-        // Sadece tasarımları görmek için geçici metodlar:
-        public IActionResult ForgotPassword() { return View(); }
-        public IActionResult VerifyCode() { return View(); }
-        public IActionResult ResetPassword() { return View(); }
+
+        // GET: ForgotPassword
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            ViewBag.Message = "Şifre sıfırlama özelliği yakında eklenecek.";
+            return View();
+        }
     }
 }

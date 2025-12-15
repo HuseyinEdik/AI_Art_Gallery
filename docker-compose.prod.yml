@@ -1,0 +1,80 @@
+# Production ortamý için docker-compose
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ai-gallery-postgres-prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_gallery_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - ai-gallery-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  spring-api:
+    image: ${SPRING_API_IMAGE}
+    container_name: ai-gallery-spring-api-prod
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ai_gallery_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ai-gallery-network
+    restart: always
+
+  mvc-app:
+    image: ${MVC_APP_IMAGE}
+    container_name: ai-gallery-mvc-prod
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:80
+      ApiSettings__BaseUrl: http://spring-api:8080/api
+    ports:
+      - "${MVC_PORT:-80}:80"
+    depends_on:
+      - spring-api
+    networks:
+      - ai-gallery-network
+    volumes:
+      - app_images:/app/wwwroot/images
+    restart: always
+
+  # Nginx Reverse Proxy (Opsiyonel)
+  nginx:
+    image: nginx:alpine
+    container_name: ai-gallery-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - mvc-app
+      - spring-api
+    networks:
+      - ai-gallery-network
+    restart: always
+
+networks:
+  ai-gallery-network:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:
+  app_images:

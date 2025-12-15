@@ -1,231 +1,193 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using AI_Art_Gallery.Data;
+using Microsoft.AspNetCore.Authorization;
+using AI_Art_Gallery.Services;
 using AI_Art_Gallery.Models;
 
 namespace AI_Art_Gallery.Controllers
 {
     public class ArtworkController : Controller
     {
-        private readonly AppDbContext _context;
+        private readonly SpringApiClient _api;
 
-        public ArtworkController(AppDbContext context)
+        public ArtworkController(SpringApiClient api)
         {
-            _context = context;
+            _api = api;
         }
 
-        // 1. READ (Listeleme - Anasayfa)
+        // GET: Artwork/Index
         public async Task<IActionResult> Index()
         {
-            var artworks = await _context.Artworks
-                .Include(a => a.AppUser)  // <--- BU SATIR İSMİ GETİRİR (Artık Anonim yazmaz)
-                .Include(a => a.Likes)    // <--- BU SATIR BEĞENİ SAYISINI GETİRİR
-                .Include(a => a.Categories)
-                .OrderByDescending(a => a.CreatedAt)
-                .ToListAsync();
-
+            var token = HttpContext.Session.GetString("jwt");
+            var artworks = await _api.GetAllArts(token);
             return View(artworks);
         }
 
-        public IActionResult Create()
+        // GET: Artwork/Details/5
+        public async Task<IActionResult> Details(int id)
         {
-            // Tüm kategorileri listeye (Multi-Select) koymak için gönderiyoruz
-            ViewBag.Categories = _context.Categories.ToList();
+            var token = HttpContext.Session.GetString("jwt");
+            var artwork = await _api.GetArtworkDetails(id, token);
+
+            if (artwork == null)
+            {
+                return NotFound();
+            }
+
+            // Like bilgilerini ViewBag'e ekle
+            ViewBag.LikeCount = artwork.Likes?.Count ?? 0;
+            ViewBag.IsLiked = false; // API'den gelecek
+
+            return View(artwork);
+        }
+
+        // GET: Artwork/Create
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> Create()
+        {
+            // Kategorileri API'den çek
+            var categories = await _api.GetCategories();
+            ViewBag.Categories = categories;
             return View();
         }
 
+        // POST: Artwork/Create
+        [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Artwork artwork, IFormFile imageFile, int[] selectedCategoryIds)
+        public async Task<IActionResult> Create(string title, string promptText, IFormFile imageFile, List<int> selectedCategoryIds)
         {
-            // 1. Kullanıcı Giriş Kontrolü (Opsiyonel: İstersen açık bırakabilirsin)
-            // if (!User.Identity.IsAuthenticated) return RedirectToAction("Login", "Auth");
+            var token = HttpContext.Session.GetString("jwt");
 
-            // 2. Dosya Kaydetme
-            if (imageFile != null)
+            if (string.IsNullOrEmpty(token))
             {
-                var extension = Path.GetExtension(imageFile.FileName);
-                var newImageName = Guid.NewGuid() + extension;
-                var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/");
+                return RedirectToAction("Login", "Auth");
+            }
 
-                if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
-
-                using (var stream = new FileStream(Path.Combine(folderPath, newImageName), FileMode.Create))
+            try
+            {
+                if (imageFile == null || imageFile.Length == 0)
                 {
-                    await imageFile.CopyToAsync(stream);
+                    ModelState.AddModelError("", "Lütfen bir görsel dosyası seçin.");
+                    var categories = await _api.GetCategories();
+                    ViewBag.Categories = categories;
+                    return View();
                 }
-                artwork.ImageUrl = "/images/" + newImageName;
-            }
 
-            // 3. Kullanıcı ID Atama (Eğer giriş yapmışsa)
-            if (User.Identity.IsAuthenticated)
+                var artwork = await _api.CreateArtwork(title, promptText, imageFile, selectedCategoryIds ?? new List<int>(), token);
+
+                TempData["SuccessMessage"] = "Eseriniz başarıyla paylaşıldı!";
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
             {
-                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (userId != null) artwork.AppUserId = int.Parse(userId);
+                ModelState.AddModelError("", "Eser paylaşılırken bir hata oluştu: " + ex.Message);
+                var categories = await _api.GetCategories();
+                ViewBag.Categories = categories;
+                return View();
             }
-
-            if (selectedCategoryIds != null && selectedCategoryIds.Length > 0)
-            {
-                // Seçilen ID'lere sahip kategorileri veritabanından bulup resme ekliyoruz
-                artwork.Categories = _context.Categories
-                    .Where(c => selectedCategoryIds.Contains(c.Id))
-                    .ToList();
-            }
-
-            // --- HATALARI TEMİZLE (Kritik Kısım) ---
-            ModelState.Remove("ImageUrl");
-            ModelState.Remove("AppUser");
-            ModelState.Remove("AppUserId");
-            ModelState.Remove("Comments");
-            ModelState.Remove("Likes");
-
-            if (ModelState.IsValid)
-            {
-                _context.Add(artwork);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Görsel yüklendi.";
-                return RedirectToAction(nameof(Index));
-            }
-            ViewBag.Categories = _context.Categories.ToList();
-            return View(artwork);
         }
 
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null) return NotFound();
-
-            var artwork = await _context.Artworks
-                .Include(a => a.AppUser)       // <--- SAHİBİNİ GETİRİR
-                .Include(a => a.Likes)         // <--- BEĞENİLERİ GETİRİR
-                .Include(a => a.Comments).ThenInclude(c => c.AppUser) // <--- YORUMLARI GETİRİR
-                .Include(a => a.Categories)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (artwork == null) return NotFound();
-
-            // Beğeni kontrolü
-            bool isLiked = false;
-            if (User.Identity.IsAuthenticated)
-            {
-                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (userId != null)
-                {
-                    isLiked = artwork.Likes.Any(l => l.AppUserId == int.Parse(userId));
-                }
-            }
-
-            ViewBag.IsLiked = isLiked;
-            ViewBag.LikeCount = artwork.Likes.Count;
-
-            return View(artwork);
-        }
-        // --- GÖNDERİ SİLME (Gelişmiş) ---
+        // POST: Artwork/Delete/5
+        [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            // 1. Resmi bul (İlişkileriyle beraber)
-            var artwork = await _context.Artworks
-                .Include(a => a.Comments) // Yorumlarını getir
-                .Include(a => a.Likes)    // Beğenilerini getir
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var token = HttpContext.Session.GetString("jwt");
 
-            if (artwork == null) return NotFound();
-
-            // 2. Güvenlik Kontrolü: Silen kişi Sahibi mi veya Admin mi?
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-            if (!User.IsInRole("Admin") && artwork.AppUserId.ToString() != userId)
+            if (string.IsNullOrEmpty(token))
             {
-                return Forbid(); // Yetkisiz işlem
+                return RedirectToAction("Login", "Auth");
             }
 
-            // 3. ÖNCE BAĞLI VERİLERİ SİL (Hata almamak için)
-            if (artwork.Comments.Any()) _context.Comments.RemoveRange(artwork.Comments);
-            if (artwork.Likes.Any()) _context.Likes.RemoveRange(artwork.Likes);
-
-            // 4. SONRA RESMİ SİL
-            _context.Artworks.Remove(artwork);
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Görsel ve tüm verileri silindi.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // --- YORUM SİLME (YENİ) ---
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteComment(int commentId)
-        {
-            var comment = await _context.Comments.FindAsync(commentId);
-            if (comment == null) return NotFound();
-
-            // Güvenlik: Yorumu sadece Yazan Kişi veya Admin silebilir
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-            if (User.IsInRole("Admin") || comment.AppUserId.ToString() == userId)
+            try
             {
-                _context.Comments.Remove(comment);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Yorum silindi.";
+                await _api.DeleteArtwork(id, token);
+                TempData["SuccessMessage"] = "Eser başarıyla silindi.";
+                return RedirectToAction("Index");
             }
-
-            // Detay sayfasına geri dön
-            return RedirectToAction("Details", new { id = comment.ArtworkId });
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Eser silinirken bir hata oluştu.";
+                return RedirectToAction("Details", new { id });
+            }
         }
 
-        // 1. BEĞENİ İŞLEMİ (Toggle: Varsa siler, yoksa ekler)
+        // POST: Artwork/ToggleLike/5
+        [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleLike(int id)
         {
-            if (!User.Identity.IsAuthenticated) return RedirectToAction("Login", "Auth");
+            var token = HttpContext.Session.GetString("jwt");
 
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value);
-
-            var existingLike = await _context.Likes
-                .FirstOrDefaultAsync(l => l.ArtworkId == id && l.AppUserId == userId);
-
-            if (existingLike != null)
+            if (string.IsNullOrEmpty(token))
             {
-                _context.Likes.Remove(existingLike); // Beğeniyi Kaldır
-            }
-            else
-            {
-                _context.Likes.Add(new Like { ArtworkId = id, AppUserId = userId }); // Beğeni Ekle
+                return RedirectToAction("Login", "Auth");
             }
 
-            await _context.SaveChangesAsync();
-
-            // Detay sayfasına geri dön ama olduğu yerde kalsın
-            return RedirectToAction("Details", new { id = id });
+            try
+            {
+                await _api.ToggleLike(id, token);
+                return RedirectToAction("Details", new { id });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Beğeni işlemi başarısız oldu.";
+                return RedirectToAction("Details", new { id });
+            }
         }
 
-        // 2. YORUM YAPMA İŞLEMİ
+        // POST: Artwork/AddComment
+        [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddComment(int artworkId, string content)
         {
-            if (!User.Identity.IsAuthenticated) return RedirectToAction("Login", "Auth");
+            var token = HttpContext.Session.GetString("jwt");
 
-            if (!string.IsNullOrWhiteSpace(content))
+            if (string.IsNullOrEmpty(token))
             {
-                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier).Value);
-
-                var comment = new Comment
-                {
-                    ArtworkId = artworkId,
-                    AppUserId = userId,
-                    Content = content,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Comments.Add(comment);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Yorumunuz eklendi!";
+                return RedirectToAction("Login", "Auth");
             }
 
-            return RedirectToAction("Details", new { id = artworkId });
+            try
+            {
+                await _api.AddComment(artworkId, content, token);
+                return RedirectToAction("Details", new { id = artworkId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Yorum eklenirken bir hata oluştu.";
+                return RedirectToAction("Details", new { id = artworkId });
+            }
+        }
+
+        // POST: Artwork/DeleteComment
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteComment(int commentId, int artworkId)
+        {
+            var token = HttpContext.Session.GetString("jwt");
+
+            if (string.IsNullOrEmpty(token))
+            {
+                return RedirectToAction("Login", "Auth");
+            }
+
+            try
+            {
+                await _api.DeleteComment(commentId, token);
+                TempData["SuccessMessage"] = "Yorum başarıyla silindi.";
+                return RedirectToAction("Details", new { id = artworkId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Yorum silinirken bir hata oluştu.";
+                return RedirectToAction("Details", new { id = artworkId });
+            }
         }
     }
 }

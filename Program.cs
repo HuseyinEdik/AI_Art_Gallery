@@ -1,12 +1,32 @@
+using AI_Art_Gallery.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.EntityFrameworkCore;
-using AI_Art_Gallery.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Veritabaný Baðlantýsý
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Docker ortamý için appsettings yapýlandýrmasý
+if (builder.Environment.EnvironmentName == "Docker")
+{
+    builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true, reloadOnChange: true);
+}
+
+// SpringApiClient için HttpClient yapýlandýrmasý
+builder.Services.AddHttpClient<SpringApiClient>((serviceProvider, client) =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    var baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:8080/api";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+builder.Services.AddScoped<SpringApiClient>();
+
+// Session yapýlandýrmasý
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 // Kimlik Doðrulama Ayarlarý
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -14,11 +34,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Auth/Login";
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
     });
 
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+app.UseSession();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -26,18 +49,21 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Docker ortamýnda HTTPS redirection'ý devre dýþý býrak
+if (!app.Environment.EnvironmentName.Equals("Docker", StringComparison.OrdinalIgnoreCase))
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); // Önce kimlik kontrolü
-app.UseAuthorization();  // Sonra yetki kontrolü
+app.UseAuthentication();
+app.UseAuthorization();
 
-// YÖNLENDÝRME AYARI:
-// Site açýlýnca direkt Artwork/Index sayfasýna gitmesini söylüyoruz.
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Artwork}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
