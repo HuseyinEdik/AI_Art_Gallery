@@ -25,68 +25,73 @@
 
                     <div class="mb-4">
                         <label class="form-label text-white fw-semibold">Görsel Dosyası</label>
-                        <input type="file" name="imageFile" class="form-control bg-dark text-white border-secondary" accept="image/*" required />
+                        <input type="file" name="imageFile" id="imageFile" class="form-control bg-dark text-white border-secondary" accept="image/*" required />
+                        <div class="form-text text-secondary small mt-1">
+                            <i class="fa-solid fa-info-circle me-1"></i> Maksimum dosya boyutu: 10 MB
+                        </div>
+                        <div id="fileSizeError" class="text-danger small mt-1" style="display: none;">
+                            <i class="fa-solid fa-exclamation-triangle me-1"></i> Dosya boyutu 10 MB'dan küçük olmalıdır!
+                        </div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label text-white fw-semibold">Kategoriler</label>
+                        <label class="form-label text-white fw-semibold mb-3">Kategoriler</label>
 
-                        <div class="mb-4">
-                            <label class="form-label text-white fw-semibold mb-3">Kategoriler</label>
+                        <div class="card bg-dark border-secondary p-3">
+                            <div class="row g-2" style="max-height: 200px; overflow-y: auto;">
 
-                            <div class="card bg-dark border-secondary p-3">
-                                <div class="row g-2" style="max-height: 200px; overflow-y: auto;">
-
-                                    @if (ViewBag.Categories != null)
+                                @if (ViewBag.Categories != null)
+                                {
+                                    foreach (var cat in ViewBag.Categories)
                                     {
-                                        foreach (var cat in ViewBag.Categories)
-                                        {
-                                            <div class="col-6 col-md-4">
-                                                <div class="form-check form-check-custom p-2 rounded-3 border border-secondary d-flex align-items-center ps-5 position-relative hover-highlight">
-
-                                                    <input class="form-check-input position-absolute start-0 ms-3"
-                                                           type="checkbox"
-                                                           name="selectedCategoryIds"
-                                                           value="@cat.Id"
-                                                           id="cat_@cat.Id"
-                                                           style="transform: scale(1.3);">
-
-                                                    <label class="form-check-label text-white stretched-link fw-bold small" for="cat_@cat.Id">
-                                                        @cat.Name
-                                                    </label>
-                                                </div>
+                                        <div class="col-6 col-md-4">
+                                            <div class="form-check p-2 rounded-3 border border-secondary hover-highlight">
+                                                <input class="form-check-input category-checkbox"
+                                                       type="checkbox"
+                                                       name="selectedCategoryIds"
+                                                       value="@cat.Id"
+                                                       id="cat_@cat.Id">
+                                                <label class="form-check-label text-white fw-bold small" for="cat_@cat.Id">
+                                                    @cat.Name
+                                                </label>
                                             </div>
-                                        }
+                                        </div>
                                     }
-                                    else
-                                    {
-                                        <div class="text-warning small">Kategoriler yüklenemedi.</div>
-                                    }
-
-                                </div>
-                            </div>
-                            <div class="form-text text-secondary small mt-2">
-                                <i class="fa-solid fa-check-double me-1"></i> İstediğiniz kadar kategori işaretleyebilirsiniz.
-                            </div>
-                        </div>
-
-                        <style>
-                            .form-check-custom {
-                                background-color: #2c2c2c;
-                                transition: all 0.2s;
-                            }
-                                /* Üzerine gelince veya seçilince rengi değişsin */
-                                .form-check-custom:hover, .form-check-input:checked + label {
-                                    background-color: #3d3d3d;
-                                    border-color: #bb86fc !important; /* Tema rengimiz (Mor) */
+                                }
+                                else
+                                {
+                                    <div class="text-warning small">Kategoriler yüklenemedi.</div>
                                 }
 
-                            .form-check-input:checked {
-                                background-color: #bb86fc;
-                                border-color: #bb86fc;
-                            }
-                        </style>
+                            </div>
+                        </div>
+                        <div class="form-text text-secondary small mt-2">
+                            <i class="fa-solid fa-check-double me-1"></i> İstediğiniz kadar kategori işaretleyebilirsiniz.
+                            <span id="selectedCount" class="badge bg-primary ms-2">0 seçili</span>
+                        </div>
                     </div>
+
+                    <style>
+                        .hover-highlight {
+                            background-color: #2c2c2c;
+                            transition: all 0.2s;
+                            cursor: pointer;
+                        }
+
+                        .hover-highlight:hover {
+                            background-color: #3d3d3d;
+                            border-color: #bb86fc !important;
+                        }
+
+                        .form-check-input:checked {
+                            background-color: #bb86fc;
+                            border-color: #bb86fc;
+                        }
+
+                        .form-check-input:checked ~ .form-check-label {
+                            color: #bb86fc !important;
+                        }
+                    </style>
 
                     <div class="mb-4">
                         <label asp-for="PromptText" class="form-label text-white fw-semibold">Prompt (Komut)</label>
@@ -110,4 +115,72 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    
+    <script>
+        // Kategori seçim sayacı
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('.category-checkbox');
+            const countBadge = document.getElementById('selectedCount');
+            const fileInput = document.getElementById('imageFile');
+            const form = document.querySelector('form');
+            const fileSizeError = document.getElementById('fileSizeError');
+            
+            // Dosya boyutu kontrolü (10 MB = 10 * 1024 * 1024 bytes)
+            const MAX_FILE_SIZE = 10 * 1024 * 1024;
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    const file = this.files[0];
+                    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                    
+                    console.log('File selected:', file.name);
+                    console.log('File size:', fileSizeMB, 'MB');
+                    
+                    if (file.size > MAX_FILE_SIZE) {
+                        fileSizeError.style.display = 'block';
+                        this.value = ''; // Dosyayı temizle
+                        alert(`Dosya boyutu çok büyük: ${fileSizeMB} MB\nMaksimum izin verilen: 10 MB`);
+                    } else {
+                        fileSizeError.style.display = 'none';
+                    }
+                }
+            });
+            
+            function updateCount() {
+                const checkedCount = document.querySelectorAll('.category-checkbox:checked').length;
+                countBadge.textContent = checkedCount + ' seçili';
+                
+                // Debug
+                console.log('=== CATEGORY SELECTION ===');
+                console.log('Total categories:', checkboxes.length);
+                console.log('Selected categories:', checkedCount);
+                
+                const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked'))
+                    .map(cb => cb.value);
+                console.log('Selected IDs:', selectedIds.join(', '));
+            }
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateCount);
+            });
+            
+            // Form submit olduğunda da log
+            form.addEventListener('submit', function(e) {
+                // Dosya boyutu kontrolü
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    if (file.size > MAX_FILE_SIZE) {
+                        e.preventDefault();
+                        alert('Lütfen 10 MB\'dan küçük bir dosya seçin!');
+                        return false;
+                    }
+                }
+                
+                const selectedIds = Array.from(document.querySelectorAll('.category-checkbox:checked'))
+                    .map(cb => cb.value);
+                console.log('=== FORM SUBMIT ===');
+                console.log('Submitting with categories:', selectedIds.join(', '));
+            });
+        });
+    </script>
 }

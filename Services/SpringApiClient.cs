@@ -1,7 +1,6 @@
-ï»¿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text;
 using AI_Art_Gallery.Models;
 using AI_Art_Gallery.Models.DTO;
 
@@ -17,104 +16,333 @@ namespace AI_Art_Gallery.Services
             _http = http;
             _logger = logger;
             
-            // Base address HttpClient factory'den gelecek
             if (_http.BaseAddress == null)
             {
-                _http.BaseAddress = new Uri("http://localhost:8080");
+                _http.BaseAddress = new Uri("http://localhost:8080/api");
             }
         }
 
         private void AddAuthHeader(string token)
         {
-            _http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
+            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
-        // LOGIN
-        public async Task<string> Login(string username, string password)
+        private async Task LogRequest(string method, string endpoint, object? body = null)
         {
-            var dto = new AuthRequestDTO
+            _logger.LogInformation("=== API REQUEST ===");
+            _logger.LogInformation("Method: {Method}", method);
+            _logger.LogInformation("Endpoint: {Endpoint}", endpoint);
+            var fullUrl = new Uri(_http.BaseAddress!, endpoint);
+            _logger.LogInformation("Full URL: {Url}", fullUrl.ToString());
+            
+            if (body != null)
             {
-                Username = username,
-                Password = password
-            };
+                var json = JsonSerializer.Serialize(body, new JsonSerializerOptions { WriteIndented = true });
+                _logger.LogInformation("Request Body: {Body}", json);
+            }
+        }
 
-            var res = await _http.PostAsJsonAsync("/api/auth/login", dto);
+        private async Task LogResponse(HttpResponseMessage response, bool includeBody = false)
+        {
+            _logger.LogInformation("=== API RESPONSE ===");
+            _logger.LogInformation("Status Code: {StatusCode} ({StatusCodeNumber})", response.StatusCode, (int)response.StatusCode);
+            
+            if (response.Content.Headers.ContentLength.HasValue)
+            {
+                var sizeKB = response.Content.Headers.ContentLength.Value / 1024.0;
+                _logger.LogInformation("Response Size: {SizeKB:F2} KB", sizeKB);
+            }
+            
+            // Sadece hata durumunda veya açýkça istendiðinde body'yi logla
+            if (includeBody || !response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                // ImageUrl içeren büyük JSON'larý kýsalt
+                if (content.Length > 1000)
+                {
+                    _logger.LogInformation("Response Body: [Large response - {Length} chars]", content.Length);
+                }
+                else
+                {
+                    _logger.LogInformation("Response Body: {Body}", content);
+                }
+            }
+        }
+
+        // LOGIN WITH DETAILS
+        public async Task<LoginResponseDTO> LoginWithDetails(string email, string password)
+        {
+            var dto = new AuthRequestDTO { Email = email, Password = password };
+
+            _logger.LogInformation("=== LOGIN REQUEST ===");
+            _logger.LogInformation("Email: {Email}", email);
+            await LogRequest("POST", "auth/login", new { email, password = "***HIDDEN***" });
+
+            var res = await _http.PostAsJsonAsync("auth/login", dto);
+            await LogResponse(res, includeBody: true);
             res.EnsureSuccessStatusCode();
 
             var json = await res.Content.ReadFromJsonAsync<LoginResponseDTO>();
-            return json?.Token ?? "";
+            
+            if (json != null)
+            {
+                _logger.LogInformation("Login successful. User: {Username}", json.Username);
+                _logger.LogInformation("Roles: {Roles}", string.Join(", ", json.Roles));
+            }
+            
+            return json ?? new LoginResponseDTO();
         }
 
-        // GETALLARTS
+        public async Task<string> Login(string email, string password)
+        {
+            var loginResponse = await LoginWithDetails(email, password);
+            return loginResponse.Token;
+        }
+
+        // REGISTER
+        public async Task<MessageResponseDTO> Register(string username, string email, string surname, string password)
+        {
+            var dto = new RegisterRequestDTO
+            {
+                Username = username,
+                Email = email,
+                Surname = surname,
+                Password = password
+            };
+
+            _logger.LogInformation("=== REGISTER REQUEST ===");
+            _logger.LogInformation("Username: {Username}, Email: {Email}", username, email);
+            await LogRequest("POST", "auth/register", new { username, email, surname, password = "***HIDDEN***" });
+
+            var res = await _http.PostAsJsonAsync("auth/register", dto);
+            await LogResponse(res, includeBody: true);
+            
+            if (!res.IsSuccessStatusCode)
+            {
+                var errorContent = await res.Content.ReadAsStringAsync();
+                _logger.LogError("Register failed: {Error}", errorContent);
+                throw new HttpRequestException($"Register failed: {res.StatusCode}");
+            }
+
+            var response = await res.Content.ReadFromJsonAsync<MessageResponseDTO>();
+            return response ?? new MessageResponseDTO { Message = "Kayýt baþarýlý" };
+        }
+
+        // GET ALL ARTS
         public async Task<List<Artwork>> GetAllArts(string? token = null)
         {
-            if (!string.IsNullOrWhiteSpace(token))
-                AddAuthHeader(token);
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    _http.DefaultRequestHeaders.Authorization = null;
+                    AddAuthHeader(token);
+                }
 
-            var list = await _http.GetFromJsonAsync<List<Artwork>>("/api/arts/public");
-            return list ?? new List<Artwork>();
-        }
+                _logger.LogInformation("=== GET ALL ARTS ===");
+                await LogRequest("GET", "arts/public");
 
-        // LIKEART
-        public async Task LikeArt(long id, string token)
-        {
-            AddAuthHeader(token);
-            var res = await _http.PostAsync($"/api/interactions/like/{id}", null);
-            res.EnsureSuccessStatusCode();
-        }
+                var response = await _http.GetAsync("arts/public", HttpCompletionOption.ResponseHeadersRead);
+                _logger.LogInformation("Response status: {StatusCode}", response.StatusCode);
+                
+                // Response boyutunu kontrol et
+                if (response.Content.Headers.ContentLength.HasValue)
+                {
+                    var sizeMB = response.Content.Headers.ContentLength.Value / (1024.0 * 1024.0);
+                    _logger.LogInformation("Response size: {SizeMB:F2} MB", sizeMB);
+                    
+                    if (sizeMB > 5.0)
+                    {
+                        _logger.LogWarning("Large response detected ({SizeMB:F2} MB). Consider implementing pagination or thumbnail URLs.", sizeMB);
+                    }
+                }
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("GetAllArts returned {StatusCode}: {Error}", response.StatusCode, errorContent);
+                    return new List<Artwork>();
+                }
 
-        // COMMENTART
-        public async Task CommentArt(long id, string content, string token)
-        {
-            AddAuthHeader(token);
-
-            var body = new { content };
-            var res = await _http.PostAsJsonAsync($"/api/interactions/comment/{id}", body);
-            res.EnsureSuccessStatusCode();
+                using var stream = await response.Content.ReadAsStreamAsync();
+                var options = new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true,
+                    PropertyNamingPolicy = null, // API'den gelen format olduðu gibi kullanýlsýn
+                    DefaultBufferSize = 81920 // 80KB buffer için streaming
+                };
+                var list = await JsonSerializer.DeserializeAsync<List<Artwork>>(stream, options);
+                
+                _logger.LogInformation("Successfully fetched {Count} artworks", list?.Count ?? 0);
+                return list ?? new List<Artwork>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error while fetching artworks");
+                return new List<Artwork>();
+            }
         }
 
         // GET CURRENT USER
         public async Task<UserDTO> GetCurrentUser(string token)
         {
-            AddAuthHeader(token);
-            var user = await _http.GetFromJsonAsync<UserDTO>("/api/auth/me");
-            return user ?? new UserDTO();
+            try
+            {
+                _logger.LogInformation("=== GET CURRENT USER ===");
+                
+                _http.DefaultRequestHeaders.Authorization = null;
+                AddAuthHeader(token);
+                
+                await LogRequest("GET", "auth/me");
+                var response = await _http.GetAsync("auth/me");
+                await LogResponse(response, includeBody: true);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("GetCurrentUser failed: Status {StatusCode}, Content: {Error}", response.StatusCode, errorContent);
+                    
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        throw new UnauthorizedAccessException("Token geçersiz veya süresi dolmuþ.");
+                    }
+                    
+                    response.EnsureSuccessStatusCode();
+                }
+                
+                var user = await response.Content.ReadFromJsonAsync<UserDTO>();
+                
+                if (user != null)
+                {
+                    _logger.LogInformation("User fetched: ID={Id}, Username={Username}", user.Id, user.Username);
+                }
+                
+                return user ?? new UserDTO();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching current user");
+                throw;
+            }
         }
 
         // GET USER ARTWORKS
         public async Task<List<Artwork>> GetUserArtworks(string token)
         {
             AddAuthHeader(token);
-            var artworks = await _http.GetFromJsonAsync<List<Artwork>>("/api/arts/my-artworks");
+            var artworks = await _http.GetFromJsonAsync<List<Artwork>>("arts/my-artworks");
             return artworks ?? new List<Artwork>();
-        }
-
-        // REGISTER
-        public async Task<MessageResponseDTO> Register(string username, string email, string password)
-        {
-            var dto = new AuthRequestDTO
-            {
-                Username = username,
-                Email = email,
-                Password = password
-            };
-
-            var res = await _http.PostAsJsonAsync("/api/auth/register", dto);
-            res.EnsureSuccessStatusCode();
-
-            var response = await res.Content.ReadFromJsonAsync<MessageResponseDTO>();
-            return response ?? new MessageResponseDTO { Message = "KayÄ±t baÅŸarÄ±lÄ±" };
         }
 
         // GET ARTWORK DETAILS
         public async Task<Artwork?> GetArtworkDetails(int id, string? token = null)
         {
-            if (!string.IsNullOrWhiteSpace(token))
-                AddAuthHeader(token);
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    _http.DefaultRequestHeaders.Authorization = null;
+                    AddAuthHeader(token);
+                }
 
-            var artwork = await _http.GetFromJsonAsync<Artwork>($"/api/arts/{id}");
-            return artwork;
+                _logger.LogInformation("=== GET ARTWORK DETAILS ===");
+                _logger.LogInformation("Artwork ID: {Id}", id);
+                
+                await LogRequest("GET", $"arts/{id}");
+                var response = await _http.GetAsync($"arts/{id}");
+                await LogResponse(response, includeBody: false);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("GetArtworkDetails failed: ID={Id}, Status={StatusCode}, Error={Error}", 
+                        id, response.StatusCode, errorContent);
+                    return null;
+                }
+
+                var responseBody = await response.Content.ReadAsStringAsync();
+                
+                // DEBUG: Ýlk 1000 karakteri logla (ImageUrl baþlamadan önce AppUser/Categories görmek için)
+                var preview = responseBody.Length > 1000 ? responseBody.Substring(0, 1000) + "..." : responseBody;
+                _logger.LogInformation("API Response Preview (1000 chars): {Preview}", preview);
+                
+                // Farklý JSON formatlarýný desteklemek için esnek deserialization
+                var options = new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true,
+                    PropertyNamingPolicy = null,
+                    // Bilinmeyen property'leri yoksay
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+                    // Number'larý string'den parse et
+                    NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
+                };
+                
+                var artwork = JsonSerializer.Deserialize<Artwork>(responseBody, options);
+                
+                if (artwork != null)
+                {
+                    _logger.LogInformation("Artwork fetched: ID={Id}, Title={Title}, Likes={LikeCount}, Comments={CommentCount}, IsLikedByCurrentUser={IsLiked}", 
+                        artwork.Id, artwork.Title, artwork.Likes?.Count ?? 0, artwork.Comments?.Count ?? 0, artwork.IsLikedByCurrentUser);
+                    _logger.LogInformation("AppUser: {HasUser}, Username={Username}, UserId={UserId}", 
+                        artwork.AppUser != null, artwork.AppUser?.Username ?? "NULL", artwork.AppUserId);
+                    _logger.LogInformation("Categories: {Count}", artwork.Categories?.Count ?? 0);
+                    
+                    // Eðer AppUser null ama AppUserId varsa, user bilgisini çekmeyi dene
+                    if (artwork.AppUser == null && artwork.AppUserId > 0 && !string.IsNullOrEmpty(token))
+                    {
+                        _logger.LogInformation("AppUser is null but AppUserId exists ({UserId}). Attempting to fetch user separately...", artwork.AppUserId);
+                        try
+                        {
+                            // Kullanýcý bilgisini ayrý endpoint'ten çek
+                            var userResponse = await _http.GetAsync($"users/{artwork.AppUserId}");
+                            if (userResponse.IsSuccessStatusCode)
+                            {
+                                artwork.AppUser = await userResponse.Content.ReadFromJsonAsync<AppUser>();
+                                _logger.LogInformation("User fetched separately: {Username}", artwork.AppUser?.Username);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Could not fetch user {UserId} separately", artwork.AppUserId);
+                        }
+                    }
+                }
+                
+                return artwork;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching artwork {Id}", id);
+                return null;
+            }
+        }
+
+        // GET CATEGORIES
+        public async Task<List<Category>> GetCategories()
+        {
+            try
+            {
+                _logger.LogInformation("=== GET CATEGORIES ===");
+                await LogRequest("GET", "categories");
+
+                var response = await _http.GetAsync("categories");
+                await LogResponse(response, includeBody: false);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("GetCategories failed: {StatusCode}", response.StatusCode);
+                    return new List<Category>();
+                }
+
+                var categories = await response.Content.ReadFromJsonAsync<List<Category>>();
+                _logger.LogInformation("Fetched {Count} categories", categories?.Count ?? 0);
+                return categories ?? new List<Category>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching categories");
+                return new List<Category>();
+            }
         }
 
         // CREATE ARTWORK
@@ -122,11 +350,21 @@ namespace AI_Art_Gallery.Services
         {
             AddAuthHeader(token);
 
+            _logger.LogInformation("=== CREATE ARTWORK ===");
+            _logger.LogInformation("Title: {Title}", title);
+            _logger.LogInformation("Image: {FileName} ({SizeMB} MB)", imageFile?.FileName, imageFile?.Length / (1024.0 * 1024.0));
+            _logger.LogInformation("Categories: {CategoryIds}", string.Join(", ", categoryIds));
+
+            const long maxSize = 10 * 1024 * 1024;
+            if (imageFile != null && imageFile.Length > maxSize)
+            {
+                throw new InvalidOperationException($"File size ({imageFile.Length / (1024.0 * 1024.0):F2} MB) exceeds 10 MB");
+            }
+
             var formData = new MultipartFormDataContent();
             formData.Add(new StringContent(title), "title");
-            formData.Add(new StringContent(promptText), "promptText");
+            formData.Add(new StringContent(promptText ?? ""), "promptText");
 
-            // GÃ¶rsel dosyasÄ±nÄ± ekle
             if (imageFile != null && imageFile.Length > 0)
             {
                 var fileContent = new StreamContent(imageFile.OpenReadStream());
@@ -134,36 +372,83 @@ namespace AI_Art_Gallery.Services
                 formData.Add(fileContent, "imageFile", imageFile.FileName);
             }
 
-            // Kategorileri ekle
             foreach (var catId in categoryIds)
             {
                 formData.Add(new StringContent(catId.ToString()), "categoryIds");
             }
 
-            var res = await _http.PostAsync("/api/arts/create", formData);
-            res.EnsureSuccessStatusCode();
+            try
+            {
+                _logger.LogInformation("Sending POST to arts/create...");
+                var res = await _http.PostAsync("arts/create", formData);
+                await LogResponse(res, includeBody: false);
+                
+                if (!res.IsSuccessStatusCode)
+                {
+                    var errorContent = await res.Content.ReadAsStringAsync();
+                    _logger.LogError("Create failed: Status {StatusCode}, Content: {Error}", res.StatusCode, errorContent);
+                }
+                
+                res.EnsureSuccessStatusCode();
 
-            var artwork = await res.Content.ReadFromJsonAsync<Artwork>();
-            return artwork ?? new Artwork();
+                var artwork = await res.Content.ReadFromJsonAsync<Artwork>();
+                _logger.LogInformation("Artwork created: ID {Id}", artwork?.Id);
+                return artwork ?? new Artwork();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating artwork");
+                throw;
+            }
         }
 
         // DELETE ARTWORK
         public async Task DeleteArtwork(int id, string token)
         {
             AddAuthHeader(token);
-            var res = await _http.DeleteAsync($"/api/arts/{id}");
+            var res = await _http.DeleteAsync($"arts/{id}");
             res.EnsureSuccessStatusCode();
         }
 
         // TOGGLE LIKE
         public async Task<InteractionResponse> ToggleLike(int id, string token)
         {
-            AddAuthHeader(token);
-            var res = await _http.PostAsync($"/api/interactions/like/{id}", null);
-            res.EnsureSuccessStatusCode();
+            try
+            {
+                _logger.LogInformation("=== TOGGLE LIKE REQUEST ===");
+                _logger.LogInformation("Artwork ID: {Id}", id);
+                
+                _http.DefaultRequestHeaders.Authorization = null;
+                AddAuthHeader(token);
+                
+                await LogRequest("POST", $"interactions/like/{id}");
+                var res = await _http.PostAsync($"interactions/like/{id}", null);
+                await LogResponse(res, includeBody: true);
+                
+                if (!res.IsSuccessStatusCode)
+                {
+                    var errorContent = await res.Content.ReadAsStringAsync();
+                    _logger.LogError("ToggleLike failed: ID={Id}, Status={StatusCode}, Error={Error}", 
+                        id, res.StatusCode, errorContent);
+                }
+                
+                res.EnsureSuccessStatusCode();
 
-            var response = await res.Content.ReadFromJsonAsync<InteractionResponse>();
-            return response ?? new InteractionResponse();
+                var response = await res.Content.ReadFromJsonAsync<InteractionResponse>();
+                
+                if (response != null)
+                {
+                    _logger.LogInformation("Like toggled successfully: IsLiked={IsLiked}, Count={Count}", 
+                        response.IsLiked, response.LikeCount);
+                }
+                
+                return response ?? new InteractionResponse();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling like for artwork {Id}", id);
+                throw;
+            }
         }
 
         // ADD COMMENT
@@ -172,7 +457,7 @@ namespace AI_Art_Gallery.Services
             AddAuthHeader(token);
 
             var dto = new CommentRequest { Content = content };
-            var res = await _http.PostAsJsonAsync($"/api/interactions/comment/{artworkId}", dto);
+            var res = await _http.PostAsJsonAsync($"interactions/comment/{artworkId}", dto);
             res.EnsureSuccessStatusCode();
 
             var comment = await res.Content.ReadFromJsonAsync<CommentDTO>();
@@ -183,22 +468,15 @@ namespace AI_Art_Gallery.Services
         public async Task DeleteComment(int commentId, string token)
         {
             AddAuthHeader(token);
-            var res = await _http.DeleteAsync($"/api/interactions/comment/{commentId}");
+            var res = await _http.DeleteAsync($"interactions/comment/{commentId}");
             res.EnsureSuccessStatusCode();
-        }
-
-        // GET CATEGORIES
-        public async Task<List<Category>> GetCategories()
-        {
-            var categories = await _http.GetFromJsonAsync<List<Category>>("/api/categories");
-            return categories ?? new List<Category>();
         }
 
         // LOGOUT
         public async Task Logout(string token)
         {
             AddAuthHeader(token);
-            await _http.PostAsync("/api/auth/logout", null);
+            await _http.PostAsync("auth/logout", null);
         }
     }
 }

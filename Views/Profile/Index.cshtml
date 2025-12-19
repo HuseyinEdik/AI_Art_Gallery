@@ -2,24 +2,38 @@
 
 @{
     ViewData["Title"] = "Profilim";
-    var user = ViewBag.User as AI_Art_Gallery.Models.AppUser;
+    var user = ViewBag.User as AI_Art_Gallery.Models.DTO.UserDTO;
 }
 
 <div class="container mt-4">
+
+    @if (TempData["WarningMessage"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            @TempData["WarningMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
     <div class="card border-0 shadow-lg rounded-4 mb-5" style="background-color: #1e1e1e;">
         <div class="card-body p-5">
             <div class="d-flex align-items-center flex-wrap gap-4">
 
                 <div class="bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center shadow"
                      style="width: 100px; height: 100px; font-size: 2.5rem; font-weight: bold; color: white;">
-                    @user?.Username.Substring(0, 1).ToUpper()
+                    @(user?.Username?.Substring(0, 1).ToUpper() ?? "?")
                 </div>
 
                 <div class="flex-grow-1">
-                    <h2 class="text-white fw-bold mb-1">@user?.Username</h2>
-                    <p class="text-secondary mb-2">@user?.Email</p>
+                    <h2 class="text-white fw-bold mb-1">@(user?.Username ?? "Kullanıcı")</h2>
+                    <p class="text-secondary mb-2">@(user?.Email ?? "Email bilgisi yok")</p>
+                    @if (!string.IsNullOrEmpty(user?.Surname))
+                    {
+                        <p class="text-secondary small mb-2">@user.Surname</p>
+                    }
                     <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">
-                        @user?.Role Hesabı
+                        Kullanıcı Hesabı
                     </span>
                 </div>
 

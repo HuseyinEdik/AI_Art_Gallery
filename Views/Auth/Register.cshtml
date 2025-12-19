@@ -1,34 +1,74 @@
-﻿@model AI_Art_Gallery.Models.AppUser
-@{
+﻿@{
     Layout = "_Layout"; ViewData["Title"] = "Kayıt Ol";
 }
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4">
-        <div class="card bg-dark text-white border-secondary">
-            <div class="card-body p-4">
-                <h3 class="text-center mb-4">Kayıt Ol</h3>
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-lg rounded-4" style="background-color: #1e1e1e;">
+            <div class="card-body p-5">
+
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3"
+                         style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 60px; height: 60px;">
+                        <i class="fa-solid fa-user-plus fa-lg text-white"></i>
+                    </div>
+                    <h2 class="text-white fw-bold">Hesap Oluştur</h2>
+                    <p class="text-secondary">AI Art Gallery'ye hoş geldiniz!</p>
+                </div>
 
                 @if (ViewBag.Error != null)
                 {
-                    <div class="alert alert-danger">@ViewBag.Error</div>
+                    <div class="alert alert-danger text-center py-2 mb-4">
+                        <i class="fa-solid fa-circle-exclamation me-2"></i>@ViewBag.Error
+                    </div>
                 }
 
                 <form asp-action="Register" method="post">
                     <div class="mb-3">
-                        <label>Kullanıcı Adı</label>
-                        <input asp-for="Username" class="form-control bg-dark text-white" required />
+                        <label class="form-label text-secondary small fw-bold">KULLANICI ADI</label>
+                        <input type="text" name="username" class="form-control bg-dark text-white border-secondary py-2" 
+                               placeholder="Kullanıcı adınız" required />
+                        <small class="text-muted">Benzersiz olmalıdır.</small>
                     </div>
+
                     <div class="mb-3">
-                        <label>Email</label>
-                        <input asp-for="Email" class="form-control bg-dark text-white" required />
+                        <label class="form-label text-secondary small fw-bold">E-POSTA</label>
+                        <input type="email" name="email" class="form-control bg-dark text-white border-secondary py-2" 
+                               placeholder="ornek@mail.com" required />
                     </div>
+
                     <div class="mb-3">
-                        <label>Şifre</label>
-                        <input asp-for="Password" type="password" class="form-control bg-dark text-white" required />
+                        <label class="form-label text-secondary small fw-bold">SOYAD</label>
+                        <input type="text" name="surname" class="form-control bg-dark text-white border-secondary py-2" 
+                               placeholder="Soyadınız" required />
                     </div>
-                    <button class="btn btn-success w-100">Kayıt Ol</button>
+
+                    <div class="mb-4">
+                        <label class="form-label text-secondary small fw-bold">ŞİFRE</label>
+                        <input type="password" name="password" class="form-control bg-dark text-white border-secondary py-2" 
+                               placeholder="En az 6 karakter" minlength="6" required />
+                        <small class="text-muted">En az 6 karakter olmalıdır.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="terms" required>
+                            <label class="form-check-label text-secondary small" for="terms">
+                                <a href="#" class="text-info text-decoration-none">Kullanım Şartları</a>nı ve 
+                                <a href="#" class="text-info text-decoration-none">Gizlilik Politikası</a>nı kabul ediyorum.
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary-custom w-100 py-2 rounded-pill fw-bold mb-3">
+                        <i class="fa-solid fa-user-plus me-2"></i>Kayıt Ol
+                    </button>
                 </form>
+
+                <div class="text-center mt-4">
+                    <span class="text-secondary">Zaten hesabın var mı?</span>
+                    <a asp-action="Login" class="text-info text-decoration-none ms-1 fw-bold">Giriş Yap</a>
+                </div>
             </div>
         </div>
     </div>

@@ -54,8 +54,15 @@
 
                         @if (User.Identity != null && User.Identity.IsAuthenticated)
                         {
+                            var username = User.Identity.Name ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "Kullanıcı";
+                            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                            
                             <li class="nav-item me-2"><a class="nav-link text-white" asp-controller="Profile" asp-action="Index">Profilim</a></li>
-                            <li class="nav-item me-3"><span class="nav-link text-warning">@User.Identity.Name</span></li>
+                            <li class="nav-item me-3">
+                                <span class="nav-link text-warning d-flex align-items-center">
+                                    <i class="fa-solid fa-user-circle me-2"></i>@username
+                                </span>
+                            </li>
                             <li class="nav-item me-3"><a class="nav-link text-danger" asp-controller="Auth" asp-action="Logout">Çıkış</a></li>
                             <li class="nav-item"><a class="btn btn-primary-custom rounded-pill px-4" asp-controller="Artwork" asp-action="Create">+ Paylaş</a></li>
                         }

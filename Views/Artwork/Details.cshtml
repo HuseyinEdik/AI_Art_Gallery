@@ -14,7 +14,12 @@
     <div class="row g-4">
 
         <div class="col-lg-9 d-flex align-items-center justify-content-center bg-black rounded-4 p-0 shadow-lg" style="min-height: 600px; overflow: hidden;">
-            <img src="@Model.ImageUrl" class="img-fluid" style="max-height: 80vh; max-width: 100%; object-fit: contain;" alt="@Model.Title">
+            <img src="@Model.ImageUrl" 
+                 class="img-fluid" 
+                 style="max-height: 80vh; max-width: 100%; object-fit: contain;" 
+                 alt="@Model.Title"
+                 loading="eager"
+                 onerror="this.src='/images/placeholder.svg'; this.onerror=null;">
         </div>
 
         <div class="col-lg-3">
@@ -66,7 +71,8 @@
                     </div>
 
                     <div class="mt-auto">
-                        <form asp-action="ToggleLike" asp-route-id="@Model.Id" class="mb-2">
+                        <form asp-action="ToggleLike" asp-route-id="@Model.Id" method="post" class="mb-2">
+                            @Html.AntiForgeryToken()
                             <button type="submit" class="btn w-100 py-2 rounded-3 fw-bold @(isLiked ? "btn-danger" : "btn-outline-danger")">
                                 <i class="@(isLiked ? "fa-solid" : "fa-regular") fa-heart me-2"></i>
                                 @(isLiked ? "Beğendin" : "Beğen") (@likeCount)
@@ -75,7 +81,8 @@
 
                         @if (User.IsInRole("Admin") || (User.Identity.IsAuthenticated && Model.AppUserId.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
                         {
-                            <form asp-action="Delete" asp-route-id="@Model.Id">
+                            <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
                                 <button class="btn btn-dark w-100 text-secondary" onclick="return confirm('Silmek istediğine emin misin?');">
                                     <i class="fa-solid fa-trash me-2"></i> Sil
                                 </button>
@@ -111,7 +118,9 @@
                                         @if (User.IsInRole("Admin") || (User.Identity.IsAuthenticated && comment.AppUserId.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
                                         {
                                             <form asp-action="DeleteComment" method="post">
+                                                @Html.AntiForgeryToken()
                                                 <input type="hidden" name="commentId" value="@comment.Id" />
+                                                <input type="hidden" name="artworkId" value="@Model.Id" />
                                                 <button type="submit" class="btn btn-link text-danger p-0" style="font-size: 0.9rem;" title="Yorumu Sil" onclick="return confirm('Yorumu silmek istiyor musun?');">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
