@@ -1,164 +1,189 @@
 ﻿@{
-    ViewData["Title"] = "AI Laboratuvarı";
+    ViewData["Title"] = "ML Prompt Analizi";
 }
 
 <div class="container mt-4">
     <div class="text-center mb-5">
         <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3 shadow-lg"
-             style="background: linear-gradient(135deg, #00f260 0%, #0575E6 100%); width: 70px; height: 70px;">
+             style="background: linear-gradient(135deg, #00f260 0%, #0575E6 100%); width: 80px; height: 80px;">
             <i class="fa-solid fa-brain fa-2x text-white"></i>
         </div>
-        <h2 class="fw-bold text-white">ML Analiz Motoru</h2>
-        <p class="text-secondary">Arkadaşınızın geliştirdiği modeli test edin.</p>
+        <h2 class="fw-bold text-white mb-2">ML Prompt Analizi</h2>
+        <p class="text-secondary">Yapay zeka ile prompt'unuzu analiz edin ve tahmin alın</p>
     </div>
 
     <div class="row g-4 align-items-stretch">
 
+        <!-- Input Bölümü -->
         <div class="col-lg-5">
             <div class="card border-0 shadow-lg h-100" style="background-color: #1e1e1e; border-radius: 15px;">
                 <div class="card-header bg-transparent border-0 pt-4 px-4">
-                    <h5 class="text-white mb-0"><i class="fa-solid fa-keyboard me-2 text-primary"></i>Veri Girişi</h5>
+                    <h5 class="text-white mb-0">
+                        <i class="fa-solid fa-keyboard me-2 text-primary"></i>Prompt Girişi
+                    </h5>
                 </div>
                 <div class="card-body p-4">
-                    <form id="analysisForm">
-                        <label class="text-secondary small fw-bold mb-2">PROMPT / METİN</label>
-                        <textarea id="promptInput" class="form-control bg-dark text-white border-secondary mb-4" rows="10"
-                                  placeholder="Analiz edilecek veriyi buraya girin..." style="resize: none;"></textarea>
+                    <form asp-action="Predict" method="post" id="promptForm">
+                        <label class="text-secondary small fw-bold mb-2">PROMPT METNİ</label>
+                        <textarea name="promptText" 
+                                  id="promptInput"
+                                  class="form-control bg-dark text-white border-secondary mb-4" 
+                                  rows="12"
+                                  placeholder="Prompt metninizi buraya girin... 
+                                  
+Örnek: 
+A beautiful sunset over mountains, 
+digital art, highly detailed, 
+trending on artstation"
+                                  required
+                                  style="resize: none; font-family: 'Courier New', monospace;"></textarea>
 
-                        <button type="button" onclick="runAnalysis()" class="btn btn-primary-custom w-100 py-3 rounded-pill fw-bold shadow">
-                            <i class="fa-solid fa-bolt me-2"></i> Analiz Et
-                        </button>
+                        @if (ViewBag.Error != null)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fa-solid fa-exclamation-triangle me-2"></i>@ViewBag.Error
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        }
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary-custom py-3 rounded-pill fw-bold shadow">
+                                <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Analiz Et ve Tahmin Al
+                            </button>
+                            <a asp-controller="Artwork" asp-action="Index" class="btn btn-outline-secondary rounded-pill">
+                                <i class="fa-solid fa-arrow-left me-2"></i>Galeriye Dön
+                            </a>
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
 
+        <!-- Info ve Nasıl Çalışır -->
         <div class="col-lg-1 d-none d-lg-flex align-items-center justify-content-center">
-            <i class="fa-solid fa-circle-arrow-right fa-3x text-secondary opacity-50"></i>
+            <i class="fa-solid fa-arrow-right fa-3x text-secondary opacity-25"></i>
         </div>
 
         <div class="col-lg-6">
             <div class="card border-0 shadow-lg h-100" style="background-color: #1e1e1e; border-radius: 15px;">
-                <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between">
-                    <h5 class="text-white mb-0"><i class="fa-solid fa-square-poll-vertical me-2 text-success"></i>Sonuçlar</h5>
-                    <span id="statusBadge" class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary rounded-pill">Bekleniyor</span>
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="text-white mb-0">
+                        <i class="fa-solid fa-circle-info me-2 text-info"></i>Nasıl Çalışır?
+                    </h5>
                 </div>
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="rounded-circle bg-primary bg-opacity-25 p-3 me-3 flex-shrink-0">
+                                <i class="fa-solid fa-1 text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-white fw-bold mb-1">Prompt Girişi</h6>
+                                <p class="text-secondary small mb-0">
+                                    AI görsel oluşturma için kullandığınız prompt metnini girin
+                                </p>
+                            </div>
+                        </div>
 
-                <div class="card-body p-4 d-flex flex-column justify-content-center">
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="rounded-circle bg-success bg-opacity-25 p-3 me-3 flex-shrink-0">
+                                <i class="fa-solid fa-2 text-success"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-white fw-bold mb-1">ML Analizi</h6>
+                                <p class="text-secondary small mb-0">
+                                    Makine öğrenmesi modeli prompt'unuzu analiz eder
+                                </p>
+                            </div>
+                        </div>
 
-                    <div id="loadingArea" class="text-center d-none">
-                        <div class="spinner-border text-primary mb-3" role="status"></div>
-                        <p class="text-secondary">Model çalışıyor...</p>
-                    </div>
-
-                    <div id="resultArea" class="d-none w-100">
-                        <div class="p-3 rounded-3 bg-black border border-secondary font-monospace text-success"
-                             style="min-height: 250px; border-left: 5px solid #00f260 !important;">
-                            <p class="mb-0" id="outputText">Sonuç buraya gelecek...</p>
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="rounded-circle bg-warning bg-opacity-25 p-3 me-3 flex-shrink-0">
+                                <i class="fa-solid fa-3 text-warning"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-white fw-bold mb-1">Tahmin Sonucu</h6>
+                                <p class="text-secondary small mb-0">
+                                    Prompt'unuzun kategorisi ve güven oranı hesaplanır
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div id="emptyState" class="text-center">
-                        <i class="fa-solid fa-microchip fa-3x text-secondary opacity-25 mb-3"></i>
-                        <p class="text-secondary">Analiz başlatılmadı.</p>
+                    <div class="alert alert-info bg-info bg-opacity-10 border-info border-opacity-25" role="alert">
+                        <div class="d-flex align-items-start">
+                            <i class="fa-solid fa-lightbulb fa-lg text-info me-3 mt-1"></i>
+                            <div>
+                                <h6 class="text-info fw-bold mb-2">İpucu</h6>
+                                <p class="text-white small mb-0">
+                                    Daha detaylı prompt'lar daha doğru tahminler verir. Görsel türü, stil ve detayları belirtin.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
+                    <div class="card bg-dark border-secondary mt-4">
+                        <div class="card-body">
+                            <h6 class="text-white fw-bold mb-3">
+                                <i class="fa-solid fa-chart-simple me-2 text-success"></i>Örnek Kategoriler
+                            </h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50 py-2 px-3">
+                                    🎨 Sanat
+                                </span>
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 py-2 px-3">
+                                    🏞️ Doğa
+                                </span>
+                                <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50 py-2 px-3">
+                                    👤 Portre
+                                </span>
+                                <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 py-2 px-3">
+                                    🏙️ Mimari
+                                </span>
+                                <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 py-2 px-3">
+                                    🔮 Fantastik
+                                </span>
+                                <span class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary border-opacity-50 py-2 px-3">
+                                    🤖 Sci-Fi
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="text-center mt-5 mb-5">
-        <a asp-controller="Artwork" asp-action="Index" class="text-secondary text-decoration-none">
-            <i class="fa-solid fa-arrow-left me-2"></i>Galeriye Dön
-        </a>
-    </div>
 </div>
-
-
-<script>
-
-    fetch("/ML/Analyze", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            text: input
-        })
-    });
-
-    async function runAnalysis() {
-        const input = document.getElementById("promptInput").value;
-        if (input.trim() === "") {
-            alert("Lütfen metin girin!");
-            return;
-        }
-
-        // UI: loading state
-        document.getElementById("emptyState").classList.add("d-none");
-        document.getElementById("resultArea").classList.add("d-none");
-        document.getElementById("loadingArea").classList.remove("d-none");
-        document.getElementById("statusBadge").innerText = "İşleniyor...";
-        document.getElementById("statusBadge").className =
-            "badge bg-primary bg-opacity-25 text-primary border border-primary rounded-pill";
-
-        try {
-            const response = await fetch("http://localhost:3001/api/analyze", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ text: input })
-            });
-
-            if (!response.ok) {
-                throw new Error("ML servisi yanıt vermedi");
-            }
-
-            const data = await response.json();
-
-            // Sonuç metni oluştur
-            let output =
-                ">> Analiz Tamamlandı.\n" +
-                ">> Girdi: " + input + "\n" +
-                ">> Tahmin: " + data.tahmin + "\n" +
-                ">> Güven Oranı: " + data.guven_orani + "\n" +
-                "-------------------\n" +
-                "Model İşlemi Bitti.";
-
-            // UI: sonucu göster
-            document.getElementById("loadingArea").classList.add("d-none");
-            document.getElementById("resultArea").classList.remove("d-none");
-            document.getElementById("outputText").innerText = output;
-
-            document.getElementById("statusBadge").innerText = "Tamamlandı";
-            document.getElementById("statusBadge").className =
-                "badge bg-success bg-opacity-25 text-success border border-success rounded-pill";
-
-        } catch (err) {
-            document.getElementById("loadingArea").classList.add("d-none");
-            document.getElementById("emptyState").classList.remove("d-none");
-
-            document.getElementById("statusBadge").innerText = "Hata";
-            document.getElementById("statusBadge").className =
-                "badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill";
-
-            alert("Hata: " + err.message);
-        }
-    }
-</script>
-
 
 <style>
     .btn-primary-custom {
         background: linear-gradient(90deg, #00f260, #0575E6);
         color: white;
         border: none;
+        transition: all 0.3s ease;
     }
 
-        .btn-primary-custom:hover {
-            transform: scale(1.02);
-            color: white;
-        }
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(5, 117, 230, 0.4);
+        color: white;
+    }
+
+    #promptInput:focus {
+        border-color: #00f260 !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 242, 96, 0.25) !important;
+    }
 </style>
+
+@section Scripts {
+    <script>
+        // Karakter sayacı (opsiyonel)
+        const textarea = document.getElementById('promptInput');
+        
+        textarea.addEventListener('input', function() {
+            const length = this.value.length;
+            console.log('Prompt length:', length);
+        });
+    </script>
+}
+

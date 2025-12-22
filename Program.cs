@@ -23,6 +23,8 @@ builder.Services.AddHttpClient<SpringApiClient>((serviceProvider, client) =>
     MaxConnectionsPerServer = 10, // Connection pooling
     UseProxy = false // Performans için proxy'yi devre dýþý býrak
 });
+ 
+
 
 builder.Services.AddScoped<SpringApiClient>();
 
@@ -81,3 +83,6 @@ name: "default",
 pattern: "{controller=Artwork}/{action=Index}/{id?}");
 
 app.Run();
+
+builder.Services.AddHttpClient();
+

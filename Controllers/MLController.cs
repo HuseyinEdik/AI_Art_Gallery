@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Text.Json;
 using AI_Art_Gallery.Models;
 
 namespace AI_Art_Gallery.Controllers
@@ -10,52 +9,45 @@ namespace AI_Art_Gallery.Controllers
     {
         private readonly HttpClient _httpClient;
 
-        public MLController()
+        public MLController(IHttpClientFactory httpClientFactory)
         {
-            _httpClient = new HttpClient();
+            _httpClient = httpClientFactory.CreateClient();
         }
 
-        // Sayfa
         [HttpGet]
         public IActionResult Index()
         {
             return View();
         }
 
-        // 🔥 FETCH BURAYA JSON GÖNDERİYOR
         [HttpPost]
-        public async Task<IActionResult> Analyze([FromBody] PromptDto request)
+        public async Task<IActionResult> Predict(string promptText)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.Text))
+            var payload = new
             {
-                return BadRequest("Prompt boş");
+                text = promptText
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(
+                "http://localhost:3001/predict", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                ViewBag.Error = "API'ye ula��lamad�";
+                return View("Index");
             }
 
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync(
-                    "http://localhost:3001/api/analyze",
-                    new { text = request.Text }
-                );
+            var responseJson = await response.Content.ReadAsStringAsync();
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    return StatusCode(500, "Node.js hata verdi");
-                }
+            var result = JsonSerializer.Deserialize<PromptResult>(
+                responseJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
 
-                var result = await response.Content.ReadFromJsonAsync<MlResultDto>();
-                return Json(result);
-            }
-            catch
-            {
-                return StatusCode(500, "Node.js API'ye ulaşılamadı");
-            }
+            return View("Result", result);
         }
-    }
-
-    // 🔥 JSON MODEL
-    public class PromptDto
-    {
-        public string Text { get; set; }
     }
 }
