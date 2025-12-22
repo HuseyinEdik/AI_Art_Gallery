@@ -1,0 +1,184 @@
+@model List<string>
+
+@{
+    ViewData["Title"] = "Log Görüntüleyici";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="text-white fw-bold mb-0">
+                        <i class="fa-solid fa-file-code me-2 text-info"></i>@ViewBag.FileName
+                    </h2>
+                    <p class="text-secondary mb-0">Son @ViewBag.RequestedLines satýr (Toplam: @ViewBag.TotalLines)</p>
+                </div>
+                <div>
+                    <a asp-action="Logs" class="btn btn-outline-secondary rounded-pill px-4 me-2">
+                        <i class="fa-solid fa-arrow-left me-2"></i>Geri
+                    </a>
+                    <a asp-action="DownloadLog" asp-route-fileName="@ViewBag.FileName" 
+                       class="btn btn-success rounded-pill px-4">
+                        <i class="fa-solid fa-download me-2"></i>Ýndir
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtreleme Seçenekleri -->
+    <div class="card border-0 shadow-lg mb-4" style="background-color: #1e1e1e; border-radius: 15px;">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="text-secondary small fw-bold mb-2">LOG SEVÝYESÝ FÝLTRESÝ</label>
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary active" onclick="filterLogs('all')">
+                            Tümü
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="filterLogs('fail')">
+                            <i class="fa-solid fa-circle-xmark me-1"></i>Error
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="filterLogs('warn')">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i>Warning
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="filterLogs('info')">
+                            <i class="fa-solid fa-circle-info me-1"></i>Info
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-secondary small fw-bold mb-2">ARAMA</label>
+                    <input type="text" id="searchBox" class="form-control bg-dark text-white border-secondary" 
+                           placeholder="Log içeriðinde ara..." onkeyup="searchLogs()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Ýçeriði -->
+    <div class="card border-0 shadow-lg" style="background-color: #121212; border-radius: 15px;">
+        <div class="card-body p-0">
+            <div class="p-3 border-bottom border-secondary" style="background-color: #1e1e1e;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-white fw-bold">
+                        <i class="fa-solid fa-terminal me-2"></i>Log Çýktýsý
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyLogs()">
+                        <i class="fa-regular fa-copy me-1"></i>Kopyala
+                    </button>
+                </div>
+            </div>
+            <div id="logContainer" class="p-3 font-monospace" 
+                 style="max-height: 70vh; overflow-y: auto; font-size: 0.85rem; line-height: 1.6;">
+                @if (!Model.Any())
+                {
+                    <div class="text-center text-secondary py-5">
+                        <i class="fa-regular fa-file fa-3x opacity-25 mb-3"></i>
+                        <p>Log dosyasý boþ.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var line in Model)
+                    {
+                        <div class="log-line" data-line="@line">
+                            @if (line.Contains("fail:") || line.Contains("error", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="text-danger">@line</span>
+                            }
+                            else if (line.Contains("warn:"))
+                            {
+                                <span class="text-warning">@line</span>
+                            }
+                            else if (line.Contains("info:"))
+                            {
+                                <span class="text-info">@line</span>
+                            }
+                            else if (line.Contains("==="))
+                            {
+                                <span class="text-success fw-bold">@line</span>
+                            }
+                            else
+                            {
+                                <span class="text-light">@line</span>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function filterLogs(level) {
+        const lines = document.querySelectorAll('.log-line');
+        
+        lines.forEach(line => {
+            const text = line.getAttribute('data-line').toLowerCase();
+            
+            if (level === 'all') {
+                line.style.display = 'block';
+            } else if (level === 'fail' && (text.includes('fail:') || text.includes('error'))) {
+                line.style.display = 'block';
+            } else if (level === 'warn' && text.includes('warn:')) {
+                line.style.display = 'block';
+            } else if (level === 'info' && text.includes('info:')) {
+                line.style.display = 'block';
+            } else {
+                line.style.display = 'none';
+            }
+        });
+
+        // Buton aktif durumunu güncelle
+        document.querySelectorAll('.btn-group .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+    }
+
+    function searchLogs() {
+        const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+        const lines = document.querySelectorAll('.log-line');
+
+        lines.forEach(line => {
+            const text = line.getAttribute('data-line').toLowerCase();
+            line.style.display = text.includes(searchTerm) ? 'block' : 'none';
+        });
+    }
+
+    function copyLogs() {
+        const logContainer = document.getElementById('logContainer');
+        const text = logContainer.innerText;
+        
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Log içeriði panoya kopyalandý!');
+        });
+    }
+</script>
+
+<style>
+    .log-line {
+        padding: 2px 0;
+        word-break: break-all;
+    }
+
+    #logContainer::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    #logContainer::-webkit-scrollbar-track {
+        background: #1e1e1e;
+    }
+
+    #logContainer::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 5px;
+    }
+
+    #logContainer::-webkit-scrollbar-thumb:hover {
+        background: #764ba2;
+    }
+</style>

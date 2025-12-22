@@ -1,0 +1,196 @@
+@model AI_Art_Gallery.Models.ViewModels.AdminDashboardViewModel
+
+@{
+    ViewData["Title"] = "Database View'larý";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">
+            <i class="fa-solid fa-database me-2"></i>Database View'larý
+        </h2>
+        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill">
+            <i class="fa-solid fa-arrow-left me-2"></i>Admin Panel
+        </a>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-exclamation-triangle me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Kategori Ýstatistikleri -->
+        <div class="col-md-6">
+            <div class="card border-0 h-100" style="background-color: #1e1e1e;">
+                <div class="card-header bg-transparent border-bottom border-secondary">
+                    <h5 class="text-white mb-0">
+                        <i class="fa-solid fa-chart-pie me-2"></i>Kategori Ýstatistikleri
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.CategoryStats.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Kategori</th>
+                                        <th class="text-end">Eser Sayýsý</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var stat in Model.CategoryStats)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-primary">@stat.Name</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="badge bg-success">@stat.TotalArts</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-4">Kategori istatistiði bulunamadý.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- En Aktif Kullanýcýlar -->
+        <div class="col-md-6">
+            <div class="card border-0 h-100" style="background-color: #1e1e1e;">
+                <div class="card-header bg-transparent border-bottom border-secondary">
+                    <h5 class="text-white mb-0">
+                        <i class="fa-solid fa-users me-2"></i>En Aktif Kullanýcýlar
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.ActiveUsers.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Sýra</th>
+                                        <th>Kullanýcý</th>
+                                        <th class="text-end">Paylaþým</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var rank = 1; }
+                                    @foreach (var user in Model.ActiveUsers)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @if (rank == 1)
+                                                {
+                                                    <i class="fa-solid fa-trophy text-warning"></i>
+                                                }
+                                                else if (rank == 2)
+                                                {
+                                                    <i class="fa-solid fa-medal text-secondary"></i>
+                                                }
+                                                else if (rank == 3)
+                                                {
+                                                    <i class="fa-solid fa-award text-danger"></i>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">#@rank</span>
+                                                }
+                                            </td>
+                                            <td>@user.Username</td>
+                                            <td class="text-end">
+                                                <span class="badge bg-info">@user.UploadCount</span>
+                                            </td>
+                                        </tr>
+                                        rank++;
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-4">Kullanýcý istatistiði bulunamadý.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Son Yüklenen Eserler -->
+        <div class="col-12">
+            <div class="card border-0" style="background-color: #1e1e1e;">
+                <div class="card-header bg-transparent border-bottom border-secondary">
+                    <h5 class="text-white mb-0">
+                        <i class="fa-solid fa-clock me-2"></i>Son Yüklenen 10 Eser
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentUploads.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Eser Baþlýðý</th>
+                                        <th class="text-end">Yüklenme Tarihi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var upload in Model.RecentUploads)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <i class="fa-solid fa-image me-2 text-primary"></i>
+                                                @upload.Title
+                                            </td>
+                                            <td class="text-end text-muted">
+                                                <i class="fa-regular fa-calendar me-2"></i>
+                                                @upload.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-4">Son yüklenen eser bulunamadý.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Diðer View'lara Linkler -->
+        <div class="col-12">
+            <div class="card border-0" style="background-color: #1e1e1e;">
+                <div class="card-body">
+                    <h5 class="text-white mb-3">
+                        <i class="fa-solid fa-table me-2"></i>Diðer View'lar
+                    </h5>
+                    <div class="d-flex gap-3">
+                        <a asp-action="DetailedArts" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-list me-2"></i>Detaylý Eser Listesi
+                        </a>
+                        <a asp-action="SystemLogs" class="btn btn-outline-warning">
+                            <i class="fa-solid fa-file-lines me-2"></i>Sistem Loglarý
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

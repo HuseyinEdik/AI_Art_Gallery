@@ -55,21 +55,52 @@
                         @if (User.Identity != null && User.Identity.IsAuthenticated)
                         {
                             var username = User.Identity.Name ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "Kullanıcı";
-                            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                            // Admin kontrolü: ROLE_ADMIN veya Admin rolünü destekle
+                            var isAdmin = User.IsInRole("ROLE_ADMIN") || User.IsInRole("Admin");
                             
-                            <li class="nav-item me-2"><a class="nav-link text-white" asp-controller="Profile" asp-action="Index">Profilim</a></li>
+                            <li class="nav-item me-2">
+                                <a class="nav-link text-white" asp-controller="Profile" asp-action="Index">
+                                    <i class="fa-solid fa-user me-1"></i>Profilim
+                                </a>
+                            </li>
+                            
+                            if (isAdmin)
+                            {
+                                <li class="nav-item me-2">
+                                    <a class="nav-link text-warning" asp-controller="Admin" asp-action="Index">
+                                        <i class="fa-solid fa-shield-halved me-1"></i>Admin
+                                    </a>
+                                </li>
+                            }
+                            
                             <li class="nav-item me-3">
-                                <span class="nav-link text-warning d-flex align-items-center">
+                                <span class="nav-link text-info d-flex align-items-center">
                                     <i class="fa-solid fa-user-circle me-2"></i>@username
                                 </span>
                             </li>
-                            <li class="nav-item me-3"><a class="nav-link text-danger" asp-controller="Auth" asp-action="Logout">Çıkış</a></li>
-                            <li class="nav-item"><a class="btn btn-primary-custom rounded-pill px-4" asp-controller="Artwork" asp-action="Create">+ Paylaş</a></li>
+                            <li class="nav-item me-3">
+                                <a class="nav-link text-danger" asp-controller="Auth" asp-action="Logout">
+                                    <i class="fa-solid fa-right-from-bracket me-1"></i>Çıkış
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="btn btn-primary-custom rounded-pill px-4" asp-controller="Artwork" asp-action="Create">
+                                    <i class="fa-solid fa-plus me-1"></i>Paylaş
+                                </a>
+                            </li>
                         }
                         else
                         {
-                            <li class="nav-item me-2"><a class="nav-link" asp-controller="Auth" asp-action="Login">Giriş Yap</a></li>
-                            <li class="nav-item"><a class="btn btn-outline-light rounded-pill px-4" asp-controller="Auth" asp-action="Register">Kayıt Ol</a></li>
+                            <li class="nav-item me-2">
+                                <a class="nav-link" asp-controller="Auth" asp-action="Login">
+                                    <i class="fa-solid fa-right-to-bracket me-1"></i>Giriş Yap
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="btn btn-outline-light rounded-pill px-4" asp-controller="Auth" asp-action="Register">
+                                    <i class="fa-solid fa-user-plus me-1"></i>Kayıt Ol
+                                </a>
+                            </li>
                         }
                     </ul>
                 </div>

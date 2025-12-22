@@ -39,12 +39,18 @@ namespace AI_Art_Gallery.Controllers
         }
 
         // GET: Artwork/Details/5
+        [Authorize]
         public async Task<IActionResult> Details(int id)
         {
             try
             {
                 _logger.LogInformation("=== ARTWORK DETAILS REQUEST ===");
                 _logger.LogInformation("Artwork ID: {Id}", id);
+                
+                // Cache busting için no-cache header ekle
+                Response.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate");
+                Response.Headers.Add("Pragma", "no-cache");
+                Response.Headers.Add("Expires", "0");
                 
                 var token = HttpContext.Session.GetString("jwt");
                 _logger.LogInformation("Token from session: {HasToken}", !string.IsNullOrEmpty(token));
@@ -61,12 +67,13 @@ namespace AI_Art_Gallery.Controllers
                 _logger.LogInformation("Artwork loaded: ID={Id}, Title={Title}", artwork.Id, artwork.Title);
                 _logger.LogInformation("=== ARTWORK OBJECT DETAILS ===");
                 _logger.LogInformation("IsLikedByCurrentUser from API: {IsLiked}", artwork.IsLikedByCurrentUser);
-                _logger.LogInformation("Likes Collection Count: {Count}", artwork.Likes?.Count ?? 0);
+                _logger.LogInformation("LikeCount from API: {Count}", artwork.LikeCount);
+                _logger.LogInformation("CommentCount from API: {Count}", artwork.CommentCount);
 
-                // Like bilgilerini ViewBag'e ekle
-                var likeCount = artwork.Likes?.Count ?? 0;
+                // Like bilgilerini ViewBag'e ekle (artık API'den sayı olarak geliyor)
+                var likeCount = artwork.LikeCount;
                 var isLikedByUser = artwork.IsLikedByCurrentUser;
-                var commentCount = artwork.Comments?.Count ?? 0;
+                var commentCount = artwork.CommentCount;
                 
                 ViewBag.LikeCount = likeCount;
                 ViewBag.CommentCount = commentCount;
@@ -75,6 +82,21 @@ namespace AI_Art_Gallery.Controllers
                 _logger.LogInformation("=== VIEW DATA ===");
                 _logger.LogInformation("ViewBag.IsLiked set to: {IsLiked}", isLikedByUser);
                 _logger.LogInformation("ViewBag.LikeCount set to: {Count}", likeCount);
+                
+                // Yorumları ayrı endpoint'ten çek (detaylı bilgi için)
+                if (commentCount > 0 && !string.IsNullOrEmpty(token))
+                {
+                    try
+                    {
+                        var comments = await _api.GetArtworkComments(id, token);
+                        artwork.Comments = comments;
+                        _logger.LogInformation("Comments fetched: {Count}", comments.Count);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Could not fetch comments for artwork {Id}", id);
+                    }
+                }
 
                 // Kullanıcı bilgileri
                 var currentUserId = HttpContext.Session.GetString("userId");

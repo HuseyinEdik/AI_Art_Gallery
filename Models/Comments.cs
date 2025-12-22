@@ -23,7 +23,8 @@ namespace AI_Art_Gallery.Models
         [JsonPropertyName("appUserId")]
         public int AppUserId { get; set; }
         
-        [JsonPropertyName("appUser")]
+        // API "user" olarak döndürüyor (appUser değil - Artwork ile tutarlılık için)
+        [JsonPropertyName("user")]
         public AppUser? AppUser { get; set; }
     }
 }

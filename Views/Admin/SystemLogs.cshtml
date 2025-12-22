@@ -1,0 +1,90 @@
+@model List<AI_Art_Gallery.Models.ViewModels.LogSummaryViewModel>
+
+@{
+    ViewData["Title"] = "Sistem Loglarý";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white">
+            <i class="fa-solid fa-file-lines me-2"></i>Sistem Loglarý
+        </h2>
+        <a asp-action="DatabaseViews" class="btn btn-outline-secondary rounded-pill">
+            <i class="fa-solid fa-arrow-left me-2"></i>Geri Dön
+        </a>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card border-0" style="background-color: #1e1e1e;">
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="alert alert-info mb-3">
+                    <i class="fa-solid fa-info-circle me-2"></i>
+                    Toplam <strong>@Model.Count</strong> log kaydý bulundu.
+                </div>
+
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-dark table-sm table-hover">
+                        <thead class="sticky-top" style="background-color: #121212;">
+                            <tr>
+                                <th style="width: 200px;">Tarih</th>
+                                <th>Log Mesajý</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var log in Model)
+                            {
+                                <tr>
+                                    <td class="text-muted small">
+                                        <i class="fa-regular fa-clock me-2"></i>
+                                        @log.CreatedAt.ToString("dd.MM.yyyy HH:mm:ss")
+                                    </td>
+                                    <td>
+                                        <code class="text-white" style="background-color: transparent;">
+                                            @log.LogMessage
+                                        </code>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fa-regular fa-file fa-3x text-secondary opacity-50 mb-3"></i>
+                    <p class="text-secondary">Henüz hiç log kaydý bulunamadý.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-responsive {
+        scrollbar-width: thin;
+        scrollbar-color: #667eea #1e1e1e;
+    }
+    
+    .table-responsive::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-track {
+        background: #1e1e1e;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 4px;
+    }
+</style>

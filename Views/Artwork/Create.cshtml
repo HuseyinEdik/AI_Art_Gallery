@@ -35,23 +35,28 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label text-white fw-semibold mb-3">Kategoriler</label>
+                        <label class="form-label text-white fw-semibold mb-3">
+                            <i class="fa-solid fa-tags me-2"></i>Kategoriler
+                        </label>
 
-                        <div class="card bg-dark border-secondary p-3">
-                            <div class="row g-2" style="max-height: 200px; overflow-y: auto;">
+                        <div class="card bg-dark border-secondary p-3" style="border-radius: 10px;">
+                            <div class="row g-3" style="max-height: 250px; overflow-y: auto;">
 
                                 @if (ViewBag.Categories != null)
                                 {
                                     foreach (var cat in ViewBag.Categories)
                                     {
-                                        <div class="col-6 col-md-4">
-                                            <div class="form-check p-2 rounded-3 border border-secondary hover-highlight">
-                                                <input class="form-check-input category-checkbox"
+                                        <div class="col-12 col-sm-6 col-md-4">
+                                            <div class="category-item p-3 rounded-3 border border-secondary d-flex align-items-center">
+                                                <input class="form-check-input category-checkbox me-3 flex-shrink-0"
                                                        type="checkbox"
                                                        name="selectedCategoryIds"
                                                        value="@cat.Id"
-                                                       id="cat_@cat.Id">
-                                                <label class="form-check-label text-white fw-bold small" for="cat_@cat.Id">
+                                                       id="cat_@cat.Id"
+                                                       style="width: 20px; height: 20px; cursor: pointer;">
+                                                <label class="form-check-label text-white fw-semibold mb-0 w-100" 
+                                                       for="cat_@cat.Id" 
+                                                       style="cursor: pointer; user-select: none;">
                                                     @cat.Name
                                                 </label>
                                             </div>
@@ -60,36 +65,68 @@
                                 }
                                 else
                                 {
-                                    <div class="text-warning small">Kategoriler yüklenemedi.</div>
+                                    <div class="col-12">
+                                        <div class="text-warning small text-center p-3">
+                                            <i class="fa-solid fa-exclamation-triangle me-2"></i>Kategoriler yüklenemedi.
+                                        </div>
+                                    </div>
                                 }
 
                             </div>
                         </div>
                         <div class="form-text text-secondary small mt-2">
-                            <i class="fa-solid fa-check-double me-1"></i> İstediğiniz kadar kategori işaretleyebilirsiniz.
+                            <i class="fa-solid fa-check-double me-1"></i> İstediğiniz kadar kategori seçebilirsiniz.
                             <span id="selectedCount" class="badge bg-primary ms-2">0 seçili</span>
                         </div>
                     </div>
 
                     <style>
-                        .hover-highlight {
+                        .category-item {
                             background-color: #2c2c2c;
-                            transition: all 0.2s;
+                            transition: all 0.3s ease;
                             cursor: pointer;
+                            min-height: 50px;
                         }
 
-                        .hover-highlight:hover {
+                        .category-item:hover {
                             background-color: #3d3d3d;
+                            border-color: #bb86fc !important;
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 8px rgba(187, 134, 252, 0.2);
+                        }
+
+                        .category-checkbox:checked {
+                            background-color: #bb86fc !important;
                             border-color: #bb86fc !important;
                         }
 
-                        .form-check-input:checked {
-                            background-color: #bb86fc;
-                            border-color: #bb86fc;
+                        .category-checkbox:checked ~ label {
+                            color: #bb86fc !important;
+                            font-weight: bold;
                         }
 
-                        .form-check-input:checked ~ .form-check-label {
-                            color: #bb86fc !important;
+                        .category-item:has(.category-checkbox:checked) {
+                            background-color: rgba(187, 134, 252, 0.1);
+                            border-color: #bb86fc !important;
+                        }
+
+                        /* Scrollbar styling */
+                        .card::-webkit-scrollbar {
+                            width: 8px;
+                        }
+
+                        .card::-webkit-scrollbar-track {
+                            background: #1e1e1e;
+                            border-radius: 10px;
+                        }
+
+                        .card::-webkit-scrollbar-thumb {
+                            background: #bb86fc;
+                            border-radius: 10px;
+                        }
+
+                        .card::-webkit-scrollbar-thumb:hover {
+                            background: #9965f4;
                         }
                     </style>
 

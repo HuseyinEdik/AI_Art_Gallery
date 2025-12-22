@@ -1,0 +1,295 @@
+@{
+    ViewData["Title"] = "Admin Paneli";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center mb-3">
+                <div class="me-3">
+                    <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle"
+                         style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 60px; height: 60px;">
+                        <i class="fa-solid fa-shield-halved fa-lg text-white"></i>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-white fw-bold mb-0">Admin Paneli</h2>
+                    <p class="text-secondary mb-0">Hoþ geldin, @User.Identity?.Name</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Ýstatistik Kartlarý -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Toplam Görsel</h6>
+                            <h2 class="text-white fw-bold mb-0">@ViewBag.TotalArtworks</h2>
+                        </div>
+                        <div class="text-white opacity-50">
+                            <i class="fa-solid fa-images fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Toplam Beðeni</h6>
+                            <h2 class="text-white fw-bold mb-0">@ViewBag.TotalLikes</h2>
+                        </div>
+                        <div class="text-white opacity-50">
+                            <i class="fa-solid fa-heart fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Toplam Yorum</h6>
+                            <h2 class="text-white fw-bold mb-0">@ViewBag.TotalComments</h2>
+                        </div>
+                        <div class="text-white opacity-50">
+                            <i class="fa-solid fa-comments fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Log Dosyasý</h6>
+                            <h2 class="text-white fw-bold mb-0">@ViewBag.LogFileCount</h2>
+                        </div>
+                        <div class="text-white opacity-50">
+                            <i class="fa-solid fa-file-lines fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yönetim Kartlarý -->
+    <div class="row g-4 mb-4">
+        <!-- Log Yönetimi -->
+        <div class="col-md-6 col-lg-4">
+            <a asp-action="Logs" class="text-decoration-none">
+                <div class="card border-0 shadow-lg h-100 admin-card" style="background-color: #1e1e1e; border-radius: 15px; transition: transform 0.2s;">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle p-3 me-3" style="background-color: #764ba2;">
+                                <i class="fa-solid fa-file-lines fa-2x text-white"></i>
+                            </div>
+                            <div>
+                                <h5 class="text-white mb-0">Log Yönetimi</h5>
+                                <small class="text-secondary">Sistem loglarýný görüntüle</small>
+                            </div>
+                        </div>
+                        <p class="text-secondary mb-0">
+                            <i class="fa-solid fa-arrow-right me-2"></i>Log dosyalarýný incele, indir veya temizle
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Database Views -->
+        <div class="col-md-6 col-lg-4">
+            <a asp-action="DatabaseViews" class="text-decoration-none">
+                <div class="card border-0 shadow-lg h-100 admin-card" style="background-color: #1e1e1e; border-radius: 15px; transition: transform 0.2s;">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rounded-circle p-3 me-3" style="background-color: #4facfe;">
+                                <i class="fa-solid fa-database fa-2x text-white"></i>
+                            </div>
+                            <div>
+                                <h5 class="text-white mb-0">Database View'larý</h5>
+                                <small class="text-secondary">Ýstatistikler ve raporlar</small>
+                            </div>
+                        </div>
+                        <p class="text-secondary mb-0">
+                            <i class="fa-solid fa-arrow-right me-2"></i>Kategori, kullanýcý ve eser istatistikleri
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Sistem Durumu -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-lg h-100" style="background-color: #1e1e1e; border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="rounded-circle p-3 me-3" style="background-color: #43e97b;">
+                            <i class="fa-solid fa-server fa-2x text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-white mb-0">API Durumu</h5>
+                            <small class="text-success">
+                                <i class="fa-solid fa-circle-check me-1"></i>@ViewBag.ApiStatus
+                            </small>
+                        </div>
+                    </div>
+                    <p class="text-secondary mb-0 font-monospace small">
+                        <i class="fa-solid fa-link me-2"></i>@ViewBag.ApiUrl
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Son Aktiviteler -->
+    @if (ViewBag.RecentArtworks != null && ((List<AI_Art_Gallery.Models.Artwork>)ViewBag.RecentArtworks).Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-lg" style="background-color: #1e1e1e; border-radius: 15px;">
+                    <div class="card-header bg-transparent border-0 pt-4">
+                        <h5 class="text-white mb-0">
+                            <i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i>Son Eklenen Görseller
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover mb-0">
+                                <thead style="background-color: #2c2c2c;">
+                                    <tr>
+                                        <th class="border-0 py-3">ID</th>
+                                        <th class="border-0 py-3">Baþlýk</th>
+                                        <th class="border-0 py-3">Kullanýcý</th>
+                                        <th class="border-0 py-3">Beðeni</th>
+                                        <th class="border-0 py-3">Yorum</th>
+                                        <th class="border-0 py-3">Tarih</th>
+                                        <th class="border-0 py-3 text-center">Ýþlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var artwork in (List<AI_Art_Gallery.Models.Artwork>)ViewBag.RecentArtworks)
+                                    {
+                                        <tr>
+                                            <td class="align-middle">
+                                                <span class="badge bg-primary">#@artwork.Id</span>
+                                            </td>
+                                            <td class="align-middle">
+                                                <span class="text-truncate d-inline-block" style="max-width: 200px;">
+                                                    @artwork.Title
+                                                </span>
+                                            </td>
+                                            <td class="align-middle">
+                                                <i class="fa-solid fa-user-circle me-2 text-info"></i>
+                                                @(artwork.AppUser?.Username ?? "Anonim")
+                                            </td>
+                                            <td class="align-middle">
+                                                <span class="badge bg-danger">
+                                                    <i class="fa-solid fa-heart me-1"></i>@artwork.LikeCount
+                                                </span>
+                                            </td>
+                                            <td class="align-middle">
+                                                <span class="badge bg-info">
+                                                    <i class="fa-solid fa-comments me-1"></i>@artwork.CommentCount
+                                                </span>
+                                            </td>
+                                            <td class="align-middle">
+                                                <small class="text-secondary">@artwork.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                            </td>
+                                            <td class="align-middle text-center">
+                                                <a asp-controller="Artwork" asp-action="Details" asp-route-id="@artwork.Id" 
+                                                   class="btn btn-sm btn-outline-info" target="_blank">
+                                                    <i class="fa-solid fa-eye"></i> Görüntüle
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Sistem Bilgileri -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg" style="background-color: #1e1e1e; border-radius: 15px;">
+                <div class="card-header bg-transparent border-0 pt-4">
+                    <h5 class="text-white mb-0">
+                        <i class="fa-solid fa-info-circle me-2 text-info"></i>Sistem Bilgileri
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="p-3">
+                                <i class="fa-solid fa-server fa-2x text-primary mb-2"></i>
+                                <h6 class="text-white">Sunucu</h6>
+                                <p class="text-secondary mb-0">Çalýþýyor</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3">
+                                <i class="fa-solid fa-database fa-2x text-success mb-2"></i>
+                                <h6 class="text-white">API</h6>
+                                <p class="text-secondary mb-0">localhost:8080</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3">
+                                <i class="fa-solid fa-clock fa-2x text-warning mb-2"></i>
+                                <h6 class="text-white">Þu An</h6>
+                                <p class="text-secondary mb-0">@DateTime.Now.ToString("HH:mm:ss")</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3">
+                                <i class="fa-solid fa-code-branch fa-2x text-danger mb-2"></i>
+                                <h6 class="text-white">Versiyon</h6>
+                                <p class="text-secondary mb-0">.NET 8.0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-5 mb-4">
+        <a asp-controller="Artwork" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="fa-solid fa-arrow-left me-2"></i>Galeriye Dön
+        </a>
+    </div>
+</div>
+
+<style>
+    .admin-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+

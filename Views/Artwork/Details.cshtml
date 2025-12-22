@@ -79,12 +79,20 @@
                             </button>
                         </form>
 
-                        @if (User.IsInRole("Admin") || (User.Identity.IsAuthenticated && Model.AppUserId.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
+                        @* Silme butonu sadece eser sahibi veya admin görebilir *@
+                        @{
+                            var isOwner = ViewBag.IsOwner ?? false;
+                            var isAdmin = User.IsInRole("ROLE_ADMIN") || User.IsInRole("Admin");
+                            var canDelete = isOwner || isAdmin;
+                        }
+
+                        @if (canDelete)
                         {
                             <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
                                 @Html.AntiForgeryToken()
-                                <button class="btn btn-dark w-100 text-secondary" onclick="return confirm('Silmek istediğine emin misin?');">
-                                    <i class="fa-solid fa-trash me-2"></i> Sil
+                                <button class="btn btn-dark w-100 text-danger border-danger" 
+                                        onclick="return confirm('Bu eseri silmek istediğinize emin misiniz?');">
+                                    <i class="fa-solid fa-trash me-2"></i> Eseri Sil
                                 </button>
                             </form>
                         }
@@ -96,7 +104,7 @@
 
     <div class="row mt-5 justify-content-center">
         <div class="col-lg-10">
-            <h4 class="text-white mb-4"><i class="fa-regular fa-comments me-2"></i>Yorumlar (@(Model.Comments?.Count ?? 0))</h4>
+            <h4 class="text-white mb-4"><i class="fa-regular fa-comments me-2"></i>Yorumlar (@ViewBag.CommentCount)</h4>
             <div class="card border-0 rounded-4" style="background-color: #1e1e1e;">
                 <div class="card-body p-4">
                     @if (Model.Comments != null && Model.Comments.Any())
@@ -115,13 +123,24 @@
                                             <small class="text-secondary" style="font-size: 0.75rem;">@comment.CreatedAt.ToString("dd.MM HH:mm")</small>
                                         </div>
 
-                                        @if (User.IsInRole("Admin") || (User.Identity.IsAuthenticated && comment.AppUserId.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
+                                        @* Yorum silme butonu - sadece yorum sahibi veya admin *@
+                                        @{
+                                            var currentUserId = ViewBag.CurrentUserId as string;
+                                            var isCommentOwner = !string.IsNullOrEmpty(currentUserId) && comment.AppUserId.ToString() == currentUserId;
+                                            var isAdminUser = User.IsInRole("ROLE_ADMIN") || User.IsInRole("Admin");
+                                            var canDeleteComment = isCommentOwner || isAdminUser;
+                                        }
+
+                                        @if (canDeleteComment)
                                         {
-                                            <form asp-action="DeleteComment" method="post">
+                                            <form asp-action="DeleteComment" method="post" class="d-inline">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="commentId" value="@comment.Id" />
                                                 <input type="hidden" name="artworkId" value="@Model.Id" />
-                                                <button type="submit" class="btn btn-link text-danger p-0" style="font-size: 0.9rem;" title="Yorumu Sil" onclick="return confirm('Yorumu silmek istiyor musun?');">
+                                                <button type="submit" class="btn btn-link text-danger p-0" 
+                                                        style="font-size: 0.9rem;" 
+                                                        title="Yorumu Sil" 
+                                                        onclick="return confirm('Bu yorumu silmek istediğinize emin misiniz?');">
                                                     <i class="fa-solid fa-trash"></i>
                                                 </button>
                                             </form>

@@ -44,6 +44,17 @@ namespace AI_Art_Gallery.Controllers
                 HttpContext.Session.SetString("username", loginResponse.Username);
                 HttpContext.Session.SetString("email", loginResponse.Email);
                 HttpContext.Session.SetString("surname", loginResponse.Surname);
+                
+                // Session'ı commit et
+                await HttpContext.Session.CommitAsync();
+                
+                // DEBUG: Session'ın kaydedildiğini doğrula
+                var savedToken = HttpContext.Session.GetString("jwt");
+                Console.WriteLine($"=== LOGIN SUCCESS ===");
+                Console.WriteLine($"Token saved to session: {!string.IsNullOrEmpty(savedToken)}");
+                Console.WriteLine($"Token length: {savedToken?.Length ?? 0}");
+                Console.WriteLine($"Username: {loginResponse.Username}");
+                Console.WriteLine($"User ID: {loginResponse.Id}");
 
                 // Cookie tabanlı kimlik doğrulama
                 var claims = new List<Claim>
@@ -55,10 +66,15 @@ namespace AI_Art_Gallery.Controllers
                     new Claim("jwt", loginResponse.Token)
                 };
 
-                // Rolleri ekle
+                // Rolleri ekle (normalize et: USER → ROLE_USER, ADMIN → ROLE_ADMIN)
                 foreach (var role in loginResponse.Roles)
                 {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
+                    // Eğer rol zaten ROLE_ ile başlıyorsa olduğu gibi ekle
+                    // Değilse başına ROLE_ ekle (USER → ROLE_USER, ADMIN → ROLE_ADMIN)
+                    var normalizedRole = role.StartsWith("ROLE_") ? role : $"ROLE_{role}";
+                    claims.Add(new Claim(ClaimTypes.Role, normalizedRole));
+                    
+                    Console.WriteLine($"Role added to claims: {normalizedRole}");
                 }
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -106,9 +122,14 @@ namespace AI_Art_Gallery.Controllers
                 TempData["SuccessMessage"] = "Kayıt başarılı! Şimdi giriş yapabilirsiniz.";
                 return RedirectToAction("Login");
             }
+            catch (HttpRequestException ex)
+            {
+                ViewBag.Error = $"Kayıt başarısız! Email veya kullanıcı adı zaten kullanılıyor.";
+                return View();
+            }
             catch (Exception ex)
             {
-                ViewBag.Error = "Kayıt başarısız! Bu kullanıcı adı veya email zaten kullanılıyor.";
+                ViewBag.Error = "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.";
                 return View();
             }
         }
@@ -188,7 +209,7 @@ namespace AI_Art_Gallery.Controllers
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
             TempData["SuccessMessage"] = "Başarıyla çıkış yaptınız.";
-            return RedirectToAction("Login");
+            return RedirectToAction("Index", "Artwork");
         }
 
         // GET: ForgotPassword

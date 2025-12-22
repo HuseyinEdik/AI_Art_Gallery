@@ -124,8 +124,25 @@ namespace AI_Art_Gallery.Services
                 throw new HttpRequestException($"Register failed: {res.StatusCode}");
             }
 
-            var response = await res.Content.ReadFromJsonAsync<MessageResponseDTO>();
-            return response ?? new MessageResponseDTO { Message = "Kayýt baþarýlý" };
+            // API plain text veya JSON döndürebilir
+            var contentType = res.Content.Headers.ContentType?.MediaType;
+            MessageResponseDTO response;
+            
+            if (contentType?.Contains("application/json") == true)
+            {
+                // JSON response
+                response = await res.Content.ReadFromJsonAsync<MessageResponseDTO>() 
+                    ?? new MessageResponseDTO { Message = "Kayýt baþarýlý" };
+            }
+            else
+            {
+                // Plain text response
+                var message = await res.Content.ReadAsStringAsync();
+                response = new MessageResponseDTO { Message = message };
+                _logger.LogInformation("Register response (plain text): {Message}", message);
+            }
+            
+            return response;
         }
 
         // GET ALL ARTS
@@ -262,9 +279,9 @@ namespace AI_Art_Gallery.Services
 
                 var responseBody = await response.Content.ReadAsStringAsync();
                 
-                // DEBUG: Ýlk 1000 karakteri logla (ImageUrl baþlamadan önce AppUser/Categories görmek için)
-                var preview = responseBody.Length > 1000 ? responseBody.Substring(0, 1000) + "..." : responseBody;
-                _logger.LogInformation("API Response Preview (1000 chars): {Preview}", preview);
+                // DEBUG: Ýlk 2000 karakteri logla (likes, comments, categories görmek için)
+                var preview = responseBody.Length > 2000 ? responseBody.Substring(0, 2000) + "..." : responseBody;
+                _logger.LogInformation("API Response Preview (2000 chars): {Preview}", preview);
                 
                 // Farklý JSON formatlarýný desteklemek için esnek deserialization
                 var options = new JsonSerializerOptions 
@@ -281,31 +298,12 @@ namespace AI_Art_Gallery.Services
                 
                 if (artwork != null)
                 {
-                    _logger.LogInformation("Artwork fetched: ID={Id}, Title={Title}, Likes={LikeCount}, Comments={CommentCount}, IsLikedByCurrentUser={IsLiked}", 
-                        artwork.Id, artwork.Title, artwork.Likes?.Count ?? 0, artwork.Comments?.Count ?? 0, artwork.IsLikedByCurrentUser);
+                    _logger.LogInformation("Artwork fetched: ID={Id}, Title={Title}, LikeCount={LikeCount}, CommentCount={CommentCount}, IsLikedByCurrentUser={IsLiked}", 
+                        artwork.Id, artwork.Title, artwork.LikeCount, artwork.CommentCount, artwork.IsLikedByCurrentUser);
                     _logger.LogInformation("AppUser: {HasUser}, Username={Username}, UserId={UserId}", 
                         artwork.AppUser != null, artwork.AppUser?.Username ?? "NULL", artwork.AppUserId);
-                    _logger.LogInformation("Categories: {Count}", artwork.Categories?.Count ?? 0);
-                    
-                    // Eðer AppUser null ama AppUserId varsa, user bilgisini çekmeyi dene
-                    if (artwork.AppUser == null && artwork.AppUserId > 0 && !string.IsNullOrEmpty(token))
-                    {
-                        _logger.LogInformation("AppUser is null but AppUserId exists ({UserId}). Attempting to fetch user separately...", artwork.AppUserId);
-                        try
-                        {
-                            // Kullanýcý bilgisini ayrý endpoint'ten çek
-                            var userResponse = await _http.GetAsync($"users/{artwork.AppUserId}");
-                            if (userResponse.IsSuccessStatusCode)
-                            {
-                                artwork.AppUser = await userResponse.Content.ReadFromJsonAsync<AppUser>();
-                                _logger.LogInformation("User fetched separately: {Username}", artwork.AppUser?.Username);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Could not fetch user {UserId} separately", artwork.AppUserId);
-                        }
-                    }
+                    _logger.LogInformation("Category: {HasCategory}, CategoryName={CategoryName}", 
+                        artwork.Category != null, artwork.Category?.Name ?? "NULL");
                 }
                 
                 return artwork;
@@ -314,6 +312,61 @@ namespace AI_Art_Gallery.Services
             {
                 _logger.LogError(ex, "Error fetching artwork {Id}", id);
                 return null;
+            }
+        }
+
+        // GET ARTWORK COMMENTS
+        public async Task<List<Comment>> GetArtworkComments(int id, string token)
+        {
+            try
+            {
+                _http.DefaultRequestHeaders.Authorization = null;
+                AddAuthHeader(token);
+                
+                _logger.LogInformation("=== FETCHING COMMENTS ===");
+                _logger.LogInformation("Artwork ID: {Id}", id);
+                
+                var response = await _http.GetAsync($"arts/{id}/comments");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("GetArtworkComments failed: ID={Id}, Status={StatusCode}", id, response.StatusCode);
+                    return new List<Comment>();
+                }
+                
+                var responseBody = await response.Content.ReadAsStringAsync();
+                
+                // DEBUG: Ýlk 500 karakteri logla
+                var preview = responseBody.Length > 500 ? responseBody.Substring(0, 500) + "..." : responseBody;
+                _logger.LogInformation("Comments Response Preview: {Preview}", preview);
+                
+                var options = new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true,
+                    PropertyNamingPolicy = null
+                };
+                
+                var comments = System.Text.Json.JsonSerializer.Deserialize<List<Comment>>(responseBody, options);
+                
+                if (comments != null && comments.Any())
+                {
+                    _logger.LogInformation("Comments parsed: Count={Count}", comments.Count);
+                    foreach (var comment in comments)
+                    {
+                        _logger.LogInformation("Comment ID={Id}, Content={Content}, AppUser={HasUser}, Username={Username}", 
+                            comment.Id, 
+                            comment.Content.Substring(0, Math.Min(20, comment.Content.Length)), 
+                            comment.AppUser != null,
+                            comment.AppUser?.Username ?? "NULL");
+                    }
+                }
+                
+                return comments ?? new List<Comment>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching comments for artwork {Id}", id);
+                return new List<Comment>();
             }
         }
 
@@ -477,6 +530,37 @@ namespace AI_Art_Gallery.Services
         {
             AddAuthHeader(token);
             await _http.PostAsync("auth/logout", null);
+        }
+
+        // ADMIN - GET DATABASE VIEWS
+        public async Task<List<T>> GetDatabaseView<T>(string viewName, string token)
+        {
+            try
+            {
+                AddAuthHeader(token);
+                
+                _logger.LogInformation("=== GET DATABASE VIEW ===");
+                _logger.LogInformation("View Name: {ViewName}", viewName);
+
+                var response = await _http.GetAsync($"/api/admin/views/{viewName}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("GetDatabaseView failed: View={ViewName}, Status={StatusCode}", 
+                        viewName, response.StatusCode);
+                    return new List<T>();
+                }
+                
+                var data = await response.Content.ReadFromJsonAsync<List<T>>();
+                _logger.LogInformation("View data fetched: {Count} records", data?.Count ?? 0);
+                
+                return data ?? new List<T>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching database view: {ViewName}", viewName);
+                return new List<T>();
+            }
         }
     }
 }

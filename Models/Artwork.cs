@@ -29,32 +29,47 @@ namespace AI_Art_Gallery.Models
         [JsonPropertyName("appUserId")]
         public int AppUserId { get; set; }
         
-        // Spring Boot farklı formatlardan birini döndürebilir
-        [JsonPropertyName("appUser")]
+        // Spring Boot "user" olarak döndürüyor (appUser değil)
+        [JsonPropertyName("user")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public AppUser? AppUser { get; set; }
         
-        // Alternatif: user field name
-        [JsonPropertyName("user")]
+        // Spring Boot "category" olarak döndürüyor (tek object, array değil)
+        [JsonPropertyName("category")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public AppUser? User 
+        public Category? Category { get; set; }
+        
+        // Categories collection'ı Category'den türetiyoruz
+        [JsonIgnore]
+        public ICollection<Category> Categories 
         { 
-            get => AppUser; 
-            set => AppUser = value; 
+            get 
+            {
+                if (Category == null) return new List<Category>();
+                return new List<Category> { Category };
+            }
+            set 
+            {
+                if (value != null && value.Any())
+                {
+                    Category = value.First();
+                }
+            }
         }
-
-        // Navigation properties - Circular reference önlemek için JsonIgnore
-        [JsonPropertyName("comments")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        
+        // Spring Boot array yerine sayı döndürüyor
+        [JsonPropertyName("likeCount")]
+        public int LikeCount { get; set; }
+        
+        [JsonPropertyName("commentCount")]
+        public int CommentCount { get; set; }
+        
+        // Likes ve Comments artık kullanılmayacak (sayı olarak geldiği için)
+        [JsonIgnore]
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
         
-        [JsonPropertyName("likes")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonIgnore]
         public ICollection<Like> Likes { get; set; } = new List<Like>();
-        
-        [JsonPropertyName("categories")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ICollection<Category> Categories { get; set; } = new List<Category>();
         
         // API'den gelen beğeni durumu
         [JsonPropertyName("isLikedByCurrentUser")]

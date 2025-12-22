@@ -32,6 +32,8 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Development için
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 // Kimlik Doðrulama Ayarlarý
@@ -76,6 +78,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
 name: "default",
-pattern: "{controller=Auth}/{action=Login}/{id?}");
+pattern: "{controller=Artwork}/{action=Index}/{id?}");
 
 app.Run();

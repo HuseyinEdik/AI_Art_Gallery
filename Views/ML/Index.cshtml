@@ -75,30 +75,80 @@
     </div>
 </div>
 
-<script>
-    function runAnalysis() {
-        var input = document.getElementById("promptInput").value;
-        if (input.trim() === "") { alert("Lütfen metin girin!"); return; }
 
-        // Görünümü güncelle
+<script>
+
+    fetch("/ML/Analyze", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            text: input
+        })
+    });
+
+    async function runAnalysis() {
+        const input = document.getElementById("promptInput").value;
+        if (input.trim() === "") {
+            alert("Lütfen metin girin!");
+            return;
+        }
+
+        // UI: loading state
         document.getElementById("emptyState").classList.add("d-none");
         document.getElementById("resultArea").classList.add("d-none");
         document.getElementById("loadingArea").classList.remove("d-none");
         document.getElementById("statusBadge").innerText = "İşleniyor...";
-        document.getElementById("statusBadge").className = "badge bg-primary bg-opacity-25 text-primary border border-primary rounded-pill";
+        document.getElementById("statusBadge").className =
+            "badge bg-primary bg-opacity-25 text-primary border border-primary rounded-pill";
 
-        // Simülasyon (2 saniye bekle)
-        setTimeout(function() {
+        try {
+            const response = await fetch("http://localhost:3001/api/analyze", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text: input })
+            });
+
+            if (!response.ok) {
+                throw new Error("ML servisi yanıt vermedi");
+            }
+
+            const data = await response.json();
+
+            // Sonuç metni oluştur
+            let output =
+                ">> Analiz Tamamlandı.\n" +
+                ">> Girdi: " + input + "\n" +
+                ">> Tahmin: " + data.tahmin + "\n" +
+                ">> Güven Oranı: " + data.guven_orani + "\n" +
+                "-------------------\n" +
+                "Model İşlemi Bitti.";
+
+            // UI: sonucu göster
             document.getElementById("loadingArea").classList.add("d-none");
             document.getElementById("resultArea").classList.remove("d-none");
-            document.getElementById("statusBadge").innerText = "Tamamlandı";
-            document.getElementById("statusBadge").className = "badge bg-success bg-opacity-25 text-success border border-success rounded-pill";
+            document.getElementById("outputText").innerText = output;
 
-            // Sahte Sonuç Yaz
-            document.getElementById("outputText").innerText = ">> Analiz Tamamlandı.\n>> Girdi: " + input + "\n>> Tahmin: %98.4 Başarılı\n>> Kategori: Teknoloji\n-------------------\nModel İşlemi Bitti.";
-        }, 2000);
+            document.getElementById("statusBadge").innerText = "Tamamlandı";
+            document.getElementById("statusBadge").className =
+                "badge bg-success bg-opacity-25 text-success border border-success rounded-pill";
+
+        } catch (err) {
+            document.getElementById("loadingArea").classList.add("d-none");
+            document.getElementById("emptyState").classList.remove("d-none");
+
+            document.getElementById("statusBadge").innerText = "Hata";
+            document.getElementById("statusBadge").className =
+                "badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill";
+
+            alert("Hata: " + err.message);
+        }
     }
 </script>
+
 
 <style>
     .btn-primary-custom {
